@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MrGrimPDF - 100% Free & Unlimited All-in-One Online & Local PDF Suite</title>
+    <meta name="title" content="MrGrimPDF - 100% Free & Unlimited All-in-One Online & Local PDF Suite">
+    <meta name="description" content="The ultimate 100% free, unlimited, open-source and privacy-focused iLovePDF alternative. Merge, Split, Compress, Convert (Word, Excel, PPTX, JPG), OCR, Watermark, Sign, Protect, and Edit PDFs without file limits, subscriptions, or third-party server tracking. Works online & 100% locally offline.">
+    <meta name="keywords" content="free pdf tools, ilovepdf alternative, merge pdf free, split pdf online, compress pdf without limits, convert pdf to word, pdf to excel converter, scanned pdf ocr, protect pdf aes 256, sign pdf online, redact pdf, watermark pdf, open source pdf tools, self-hosted pdf editor, local pdf processor, unlimited pdf suite, mrgrimpdf">
+    <meta name="author" content="MrGrimPDF">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="canonical" href="https://mrgrimpdf.com/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mrgrimpdf.com/">
+    <meta property="og:title" content="MrGrimPDF - 100% Free & Unlimited All-in-One PDF Suite">
+    <meta property="og:description" content="All the PDF tools you need in one place. No subscriptions, no file size limits, 100% private and open-source.">
+    <meta property="og:image" content="/static/img/logo.png">
+    <meta property="og:site_name" content="MrGrimPDF">
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mrgrimpdf.com/">
+    <meta property="twitter:title" content="MrGrimPDF - Free & Unlimited PDF Suite">
+    <meta property="twitter:description" content="Privacy-first, self-hosted & online PDF editor. Merge, convert, compress, sign, and protect documents with zero limits.">
+    <meta property="twitter:image" content="/static/img/logo.png">
+
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/logo.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MrGrimPDF",
+      "url": "https://mrgrimpdf.com",
+      "description": "100% Free & Unlimited open-source PDF Suite for merging, splitting, compressing, converting, and editing PDF files locally or online.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "All (Web, Windows, Linux, MacOS)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "1280"
+      },
+      "featureList": [
+        "Merge multiple PDF files",
+        "Split and extract PDF pages",
+        "High-ratio PDF compression",
+        "PDF to Word, Excel, PPTX, Images conversion",
+        "Full multi-language OCR recognition",
+        "AES-256 PDF encryption & protection",
+        "Electronic signature drawing and stamping",
+        "Permanent redaction and censorship",
+        "Visual PDF revision comparison",
+        "Self-hosted and 100% local offline mode"
+      ]
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+    <div class="ambient-glow glow-4"></div>
+    <div class="floating-glass-tile tile-1"></div>
+    <div class="floating-glass-tile tile-2"></div>
+    <div class="floating-glass-tile tile-3"></div>
+    <div class="floating-glass-tile tile-4"></div>
+
+    <div class="app-container">
+        <header class="glass-navbar">
+            <div class="nav-left">
+                <a href="#" class="brand-logo" onclick="resetToHome()">
+                    <div class="brand-logo-img-wrap">
+                        <img src="/static/img/logo.png" alt="MrGrimPDF Logo" class="brand-img-logo">
+                    </div>
+                    <span class="brand-name">MrGrim<span class="gradient-text">PDF</span></span>
+                </a>
+            </div>
+
+            <nav class="nav-center">
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" id="exploreToolsBtn">
+                        <span>Explore Tools</span>
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                    <div class="dropdown-menu glass-dropdown">
+                        <div class="dropdown-category">
+                            <span class="cat-title"><i class="fa-solid fa-folder-tree"></i> Organize</span>
+                            <a href="#" onclick="openTool('merge')"><i class="fa-solid fa-object-group"></i> Merge PDFs</a>
+                            <a href="#" onclick="openTool('split')"><i class="fa-solid fa-scissors"></i> Split PDF</a>
+                            <a href="#" onclick="openTool('organize')"><i class="fa-solid fa-arrow-down-up-across-line"></i> Reorder Pages</a>
+                            <a href="#" onclick="openTool('rotate')"><i class="fa-solid fa-rotate-right"></i> Rotate PDF</a>
+                            <a href="#" onclick="openTool('crop')"><i class="fa-solid fa-crop-simple"></i> Crop PDF</a>
+                        </div>
+                        <div class="dropdown-category">
+                            <span class="cat-title"><i class="fa-solid fa-arrows-rotate"></i> Convert</span>
+                            <a href="#" onclick="openTool('pdf-to-word')"><i class="fa-solid fa-file-word"></i> PDF to Word</a>
+                            <a href="#" onclick="openTool('pdf-to-images')"><i class="fa-solid fa-file-image"></i> PDF to Images</a>
+                            <a href="#" onclick="openTool('images-to-pdf')"><i class="fa-solid fa-images"></i> Images to PDF</a>
+                            <a href="#" onclick="openTool('pdf-to-excel')"><i class="fa-solid fa-file-excel"></i> PDF to Excel</a>
+                            <a href="#" onclick="openTool('pdf-to-pptx')"><i class="fa-solid fa-file-powerpoint"></i> PDF to PPTX</a>
+                            <a href="#" onclick="openTool('pdf-to-pdfa')"><i class="fa-solid fa-box-archive"></i> PDF to PDF/A</a>
+                        </div>
+                        <div class="dropdown-category">
+                            <span class="cat-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Optimize & Edit</span>
+                            <a href="#" onclick="openTool('compress')"><i class="fa-solid fa-down-left-and-up-right-to-center"></i> Compress PDF</a>
+                            <a href="#" onclick="openTool('ocr')"><i class="fa-solid fa-font"></i> OCR PDF</a>
+                            <a href="#" onclick="openTool('repair')"><i class="fa-solid fa-screwdriver-wrench"></i> Repair PDF</a>
+                            <a href="#" onclick="openTool('watermark')"><i class="fa-solid fa-stamp"></i> Add Watermark</a>
+                            <a href="#" onclick="openTool('page-numbers')"><i class="fa-solid fa-list-ol"></i> Page Numbers</a>
+                            <a href="#" onclick="openTool('edit')"><i class="fa-solid fa-pen-nib"></i> Edit & Annotate</a>
+                        </div>
+                        <div class="dropdown-category">
+                            <span class="cat-title"><i class="fa-solid fa-shield-halved"></i> Security</span>
+                            <a href="#" onclick="openTool('protect')"><i class="fa-solid fa-lock"></i> Protect PDF</a>
+                            <a href="#" onclick="openTool('unlock')"><i class="fa-solid fa-lock-open"></i> Unlock PDF</a>
+                            <a href="#" onclick="openTool('sign')"><i class="fa-solid fa-signature"></i> Sign PDF</a>
+                            <a href="#" onclick="openTool('redact')"><i class="fa-solid fa-eraser"></i> Redact (Censor)</a>
+                            <a href="#" onclick="openTool('compare')"><i class="fa-solid fa-code-compare"></i> Compare PDFs</a>
+                        </div>
+                    </div>
+                </div>
+                <a href="#features" class="nav-link" onclick="scrollToSection('featuresSection')">Features</a>
+                <a href="#plans" class="nav-link" onclick="scrollToSection('plansSection')">Why Free?</a>
+                <a href="#faq" class="nav-link" onclick="scrollToSection('faqSection')">FAQ</a>
+                <button class="nav-link" onclick="openMyFilesModal()">
+                    <span>My Files</span>
+                    <span class="badge-count" id="sessionFilesBadge">0</span>
+                </button>
+            </nav>
+
+            <div class="nav-right">
+                <span class="badge-status-pill"><i class="fa-solid fa-shield-check"></i> 100% Free & Unlimited</span>
+                <button class="btn-gradient" onclick="triggerHeroUpload()">Get Started</button>
+            </div>
+        </header>
+
+        <main id="homeView" class="main-content">
+            <section class="hero-section">
+                <div class="hero-glass-card" id="dropZoneHero">
+                    <div class="upload-icon-badge">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                    </div>
+                    <h1 class="hero-title">Drag & Drop PDFs</h1>
+                    <p class="hero-subtitle">100% Free, Unlimited & Open-Source PDF Tools. No email, no file limits, no registration.</p>
+                    <button class="btn-choose-files" onclick="triggerHeroUpload()">
+                        CHOOSE FILES
+                    </button>
+                    <input type="file" id="heroFileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" style="display: none;">
+                    <div class="privacy-note">
+                        <i class="fa-solid fa-lock text-emerald-600"></i> Privacy-First: All operations run in your private secure session or locally offline.
+                    </div>
+                </div>
+            </section>
+
+            <section class="tools-filter-bar">
+                <button class="filter-pill active" onclick="filterTools('all')">All 20+ Tools</button>
+                <button class="filter-pill" onclick="filterTools('organize')">Organize & Pages</button>
+                <button class="filter-pill" onclick="filterTools('convert')">Convert Format</button>
+                <button class="filter-pill" onclick="filterTools('optimize')">Optimize & OCR</button>
+                <button class="filter-pill" onclick="filterTools('edit')">Edit & Watermark</button>
+                <button class="filter-pill" onclick="filterTools('security')">Security & Sign</button>
+            </section>
+
+            <section class="tools-grid-section">
+                <div class="tools-grid">
+                    <div class="glass-tool-card glow-pink-cyan" data-category="organize" onclick="openTool('merge')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-merge">
+                            <i class="fa-solid fa-object-group"></i>
+                        </div>
+                        <h3 class="tool-title">Merge PDFs</h3>
+                        <p class="tool-desc">Combine multiple PDF files into one in any order without page count limits.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-purple" data-category="organize" onclick="openTool('split')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-split">
+                            <i class="fa-solid fa-scissors"></i>
+                        </div>
+                        <h3 class="tool-title">Split PDF</h3>
+                        <p class="tool-desc">Separate pages into individual files or extract custom page ranges (e.g. 1-5, 8).</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-cyan" data-category="optimize" onclick="openTool('compress')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-compress">
+                            <i class="fa-solid fa-down-left-and-up-right-to-center"></i>
+                        </div>
+                        <h3 class="tool-title">Compress PDF</h3>
+                        <p class="tool-desc">Reduce file size up to 75% while maintaining sharp document readability.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-amber-pink" data-category="edit" onclick="openTool('edit')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-edit">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </div>
+                        <h3 class="tool-title">Edit PDF</h3>
+                        <p class="tool-desc">Add text, freehand drawings, rectangles, and custom annotations to any page.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-blue-sphere" data-category="security" onclick="openTool('unlock')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-unlock">
+                            <i class="fa-solid fa-lock-open"></i>
+                        </div>
+                        <h3 class="tool-title">Unlock PDF</h3>
+                        <p class="tool-desc">Remove password protection and printing/copying permission locks instantly.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-teal" data-category="organize" onclick="openTool('rotate')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-rotate">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </div>
+                        <h3 class="tool-title">Rotate PDF</h3>
+                        <p class="tool-desc">Rotate single pages or the entire document 90°, 180°, or 270° permanently.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-shield-purple" data-category="security" onclick="openTool('protect')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-protect">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="tool-title">Protect PDF</h3>
+                        <p class="tool-desc">Encrypt your PDF with unbreakable military-grade AES-256 password & permissions.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-blue" data-category="convert" onclick="openTool('pdf-to-word')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-word">
+                            <i class="fa-solid fa-file-word"></i>
+                        </div>
+                        <h3 class="tool-title">PDF to Word</h3>
+                        <p class="tool-desc">Convert PDF into editable Microsoft Word (.docx) with layouts & fonts preserved.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-amber" data-category="convert" onclick="openTool('pdf-to-images')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-image">
+                            <i class="fa-solid fa-file-image"></i>
+                        </div>
+                        <h3 class="tool-title">PDF to JPG / PNG</h3>
+                        <p class="tool-desc">Export each page as high-resolution image file in a clean ZIP bundle.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-pink" data-category="convert" onclick="openTool('images-to-pdf')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-img2pdf">
+                            <i class="fa-solid fa-images"></i>
+                        </div>
+                        <h3 class="tool-title">Images to PDF</h3>
+                        <p class="tool-desc">Convert multiple JPG, PNG, and WebP images into a single PDF document.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-rose" data-category="edit" onclick="openTool('watermark')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-watermark">
+                            <i class="fa-solid fa-stamp"></i>
+                        </div>
+                        <h3 class="tool-title">Add Watermark</h3>
+                        <p class="tool-desc">Stamp custom text or company logo with transparency, rotation, and 3x3 positioning.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-indigo" data-category="edit" onclick="openTool('page-numbers')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-numbers">
+                            <i class="fa-solid fa-list-ol"></i>
+                        </div>
+                        <h3 class="tool-title">Page Numbers</h3>
+                        <p class="tool-desc">Insert formatted page numbers into headers, footers, or corners with custom fonts.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-emerald" data-category="security" onclick="openTool('sign')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-sign">
+                            <i class="fa-solid fa-signature"></i>
+                        </div>
+                        <h3 class="tool-title">Sign PDF</h3>
+                        <p class="tool-desc">Draw, upload, or create your digital electronic signature stamp on any page.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-dark" data-category="security" onclick="openTool('redact')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-redact">
+                            <i class="fa-solid fa-eraser"></i>
+                        </div>
+                        <h3 class="tool-title">Redact PDF</h3>
+                        <p class="tool-desc">Permanently blackout and purge sensitive passwords, SSN/TCKN, or confidential data.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-violet" data-category="optimize" onclick="openTool('ocr')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-ocr">
+                            <i class="fa-solid fa-font"></i>
+                        </div>
+                        <h3 class="tool-title">OCR PDF</h3>
+                        <p class="tool-desc">Recognize scanned document text in Turkish, English, German, French and more.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-orange" data-category="optimize" onclick="openTool('repair')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-repair">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <h3 class="tool-title">Repair PDF</h3>
+                        <p class="tool-desc">Recover and repair corrupted, unreadable or damaged PDF document structures.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-cyan-blue" data-category="organize" onclick="openTool('organize')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-reorder">
+                            <i class="fa-solid fa-arrow-down-up-across-line"></i>
+                        </div>
+                        <h3 class="tool-title">Organize Pages</h3>
+                        <p class="tool-desc">Sort, delete, and duplicate pages using interactive thumbnail previews.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-green" data-category="convert" onclick="openTool('pdf-to-excel')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-excel">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </div>
+                        <h3 class="tool-title">PDF to Excel</h3>
+                        <p class="tool-desc">Extract tabular data and structured text directly to Excel spreadsheet (.xlsx).</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-red-orange" data-category="convert" onclick="openTool('pdf-to-pptx')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-pptx">
+                            <i class="fa-solid fa-file-powerpoint"></i>
+                        </div>
+                        <h3 class="tool-title">PDF to PowerPoint</h3>
+                        <p class="tool-desc">Convert PDF document pages into high-definition PowerPoint (.pptx) slides.</p>
+                    </div>
+
+                    <div class="glass-tool-card glow-purple-pink" data-category="security" onclick="openTool('compare')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-compare">
+                            <i class="fa-solid fa-code-compare"></i>
+                        </div>
+                        <h3 class="tool-title">Compare PDFs</h3>
+                        <p class="tool-desc">Analyze two PDF revisions and generate a visual difference report side-by-side.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="featuresSection" class="seo-feature-section">
+                <div class="section-badge">WHY MRGRIMPDF?</div>
+                <h2 class="section-title">The Ultimate Privacy-First & Unlimited PDF Platform</h2>
+                <p class="section-subtitle">Designed for individuals, developers, and businesses who want freedom from paid subscriptions.</p>
+
+                <div class="feature-cards-row">
+                    <div class="feature-glass-box">
+                        <div class="feature-icon-badge"><i class="fa-solid fa-bolt text-amber-500"></i></div>
+                        <h4>100% Free & No Limits</h4>
+                        <p>No daily quotas, no fake 15 MB file caps, and no paywalls. Process large files up to 500 MB+ anytime.</p>
+                    </div>
+                    <div class="feature-glass-box">
+                        <div class="feature-icon-badge"><i class="fa-solid fa-shield-halved text-emerald-500"></i></div>
+                        <h4>100% Private & Local Friendly</h4>
+                        <p>Your documents are yours. You can run MrGrimPDF completely offline on your local computer or host it privately.</p>
+                    </div>
+                    <div class="feature-glass-box">
+                        <div class="feature-icon-badge"><i class="fa-solid fa-code-branch text-indigo-500"></i></div>
+                        <h4>Open-Source & Deployable</h4>
+                        <p>Comes with ready Dockerfile, render.yaml and Procfile. Deploy to free cloud hosting in under 2 minutes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="plansSection" class="plans-section">
+                <div class="section-badge">NO PAYWALLS</div>
+                <h2 class="section-title">Why MrGrimPDF Beats Paid Services</h2>
+                <p class="section-subtitle">No monthly subscriptions, no fake upload limits, and no privacy compromises.</p>
+
+                <div class="comparison-glass-table">
+                    <div class="table-header">
+                        <div class="col-feature">Feature</div>
+                        <div class="col-paid">iLovePDF (Paid / Free)</div>
+                        <div class="col-grim"><i class="fa-solid fa-crown text-amber-400"></i> MrGrimPDF (Yours)</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="col-feature">Cost</div>
+                        <div class="col-paid">$5 – $9 / month or restricted</div>
+                        <div class="col-grim highlight-text">100% Free Forever (Open-Source)</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="col-feature">File Size Limit</div>
+                        <div class="col-paid">15 MB - 100 MB on Free</div>
+                        <div class="col-grim highlight-text">Unlimited / 500 MB+ Local</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="col-feature">Batch Processing</div>
+                        <div class="col-paid">Max 3 files on Free</div>
+                        <div class="col-grim highlight-text">Unlimited Batch Files</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="col-feature">OCR Full Support</div>
+                        <div class="col-paid">Premium Only</div>
+                        <div class="col-grim highlight-text">Full Multi-Language OCR Included</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="col-feature">Data Privacy & Security</div>
+                        <div class="col-paid">Uploads to 3rd party servers</div>
+                        <div class="col-grim highlight-text">Self-Hosted / Local Machine</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faqSection" class="faq-section">
+                <div class="section-badge">QUESTIONS & ANSWERS</div>
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <p class="section-subtitle">Everything you need to know about MrGrimPDF</p>
+
+                <div class="faq-accordion">
+                    <div class="faq-item">
+                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Is MrGrimPDF really 100% free with no hidden charges?</h3>
+                        <p class="faq-answer">Yes, MrGrimPDF is completely free, open-source, and unrestricted. There are no paid tiers, watermarks on your output files, or credit card requirements.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Are my files and documents secure?</h3>
+                        <p class="faq-answer">Absolutely. When run locally on your computer, your documents never leave your machine. When run on web servers, files are processed in isolated sessions and automatically purged after processing.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I convert scanned PDF to Word or Excel?</h3>
+                        <p class="faq-answer">Yes! MrGrimPDF includes OCR (Optical Character Recognition) supporting Turkish, English, German, French, and Spanish to turn scanned documents into editable text, Word documents, or Excel tables.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I deploy MrGrimPDF to my own domain or free hosting?</h3>
+                        <p class="faq-answer">Yes, MrGrimPDF comes with pre-configured Dockerfile, render.yaml, and Procfile so you can host it for free on Render.com, Hugging Face Spaces, Railway, or on your private VPS.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="studioModal" class="studio-modal">
+            <div class="studio-content-card">
+                <div class="studio-header">
+                    <div class="studio-title-wrap">
+                        <div class="tool-icon-wrap" id="studioToolIcon">
+                            <i class="fa-solid fa-gear"></i>
+                        </div>
+                        <div>
+                            <h2 id="studioToolTitle">Tool Workspace</h2>
+                            <p id="studioToolSubtitle">Configure your settings and process document</p>
+                        </div>
+                    </div>
+                    <button class="btn-close-studio" onclick="closeStudio()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="studio-body">
+                    <div class="studio-stage" id="studioStage">
+                        <div class="stage-drop-hint" id="stageDropHint">
+                            <i class="fa-solid fa-cloud-arrow-up text-4xl mb-3"></i>
+                            <h3>Upload your PDF or files here</h3>
+                            <p>Drag and drop or click to select</p>
+                            <input type="file" id="studioFileInput" multiple style="display:none;">
+                            <button class="btn-choose-files mt-4" onclick="document.getElementById('studioFileInput').click()">
+                                Choose Files
+                            </button>
+                        </div>
+                        <div class="stage-preview-container" id="stagePreviewContainer" style="display: none;">
+                            <div class="thumbnails-toolbar">
+                                <span id="totalPagesBadge" class="badge-pages">0 Pages</span>
+                                <div class="toolbar-actions" id="thumbnailQuickActions">
+                                    <button class="btn-tool-sm" onclick="rotateAllPages(90)"><i class="fa-solid fa-rotate-right"></i> Rotate All</button>
+                                    <button class="btn-tool-sm" onclick="selectAllPages()"><i class="fa-solid fa-check-double"></i> Select All</button>
+                                </div>
+                            </div>
+                            <div class="thumbnails-grid" id="thumbnailsGrid"></div>
+                        </div>
+
+                        <div class="stage-canvas-container" id="stageCanvasContainer" style="display: none;">
+                            <div class="canvas-controls">
+                                <button class="btn-tool-sm active" id="drawPenBtn" onclick="setCanvasMode('pen')"><i class="fa-solid fa-pen"></i> Pen</button>
+                                <button class="btn-tool-sm" id="drawRectBtn" onclick="setCanvasMode('rect')"><i class="fa-solid fa-square"></i> Rectangle</button>
+                                <button class="btn-tool-sm" id="drawTextBtn" onclick="setCanvasMode('text')"><i class="fa-solid fa-font"></i> Text</button>
+                                <input type="color" id="canvasColorPicker" value="#E11D48" class="color-picker-input">
+                                <button class="btn-tool-sm" onclick="clearCanvas()"><i class="fa-solid fa-trash"></i> Clear</button>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="drawingCanvas" width="600" height="400"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="studio-sidebar" id="studioSidebar">
+                        <div id="dynamicToolOptions">
+                        </div>
+
+                        <div class="studio-action-footer">
+                            <div class="process-progress-bar" id="processProgressBar" style="display: none;">
+                                <div class="progress-fill" id="progressFill"></div>
+                                <span class="progress-text" id="progressText">Processing document...</span>
+                            </div>
+                            <button class="btn-gradient btn-block" id="btnProcessAction" onclick="executeCurrentTool()">
+                                <i class="fa-solid fa-bolt"></i> <span id="processBtnText">Process PDF</span>
+                            </button>
+                        </div>
+
+                        <div class="studio-result-state" id="studioResultState" style="display: none;">
+                            <div class="result-icon-badge">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <h3>Document Ready!</h3>
+                            <p id="resultDetailsText">Your processed file has been generated successfully.</p>
+                            <a href="#" id="downloadResultBtn" class="btn-gradient btn-block mt-4" download>
+                                <i class="fa-solid fa-download"></i> Download File
+                            </a>
+                            <button class="btn-outline-glass btn-block mt-2" onclick="resetStudioForNewTask()">
+                                <i class="fa-solid fa-rotate-left"></i> Process Another File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="myFilesModal" class="my-files-modal">
+            <div class="my-files-card">
+                <div class="my-files-header">
+                    <h2><i class="fa-solid fa-clock-rotate-left"></i> My Session Files</h2>
+                    <button class="btn-close-studio" onclick="closeMyFilesModal()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="my-files-list" id="myFilesList">
+                    <p class="empty-history-text">No files processed in this session yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="glass-footer">
+            <div class="footer-left">
+                <span>&copy; 2026 MrGrimPDF - Private, Free, Unlimited & Open-Source PDF Suite</span>
+            </div>
+            <div class="footer-right">
+                <span>Built with Python & PyMuPDF Engine</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
