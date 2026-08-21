@@ -56,9 +56,9 @@ def sitemap():
 def manifest():
     return send_file(os.path.join(BASE_DIR, 'static', 'manifest.json'), mimetype='application/json')
 
-@app.route('/google<string:verify_hash>.html')
-def google_verify(verify_hash):
-    return f"google-site-verification: google{verify_hash}.html", 200, {'Content-Type': 'text/html; charset=utf-8'}
+@app.route('/google7673d195cb0b2acf.html')
+def google_verify():
+    return send_file(os.path.join(BASE_DIR, 'static', 'google7673d195cb0b2acf.html'), mimetype='text/html')
 
 @app.route('/favicon.ico')
 def favicon():
