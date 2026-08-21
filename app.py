@@ -52,6 +52,10 @@ def robots():
 def sitemap():
     return send_file(os.path.join(BASE_DIR, 'static', 'sitemap.xml'), mimetype='application/xml')
 
+@app.route('/manifest.json')
+def manifest():
+    return send_file(os.path.join(BASE_DIR, 'static', 'manifest.json'), mimetype='application/json')
+
 @app.route('/favicon.ico')
 def favicon():
     return send_file(os.path.join(BASE_DIR, 'static', 'img', 'favicon.png'), mimetype='image/png')

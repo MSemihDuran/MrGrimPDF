@@ -1,67 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://mrgrimpdf.com/</loc>
+    <loc>https://mr-grim-pdf.vercel.app/</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#merge</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#merge</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#split</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#split</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#compress</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#compress</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#pdf-to-word</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#pdf-to-word</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#pdf-to-excel</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#pdf-to-excel</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#ocr</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#ocr</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#protect</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#protect</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#unlock</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#unlock</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#sign</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#sign</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mrgrimpdf.com/#watermark</loc>
+    <loc>https://mr-grim-pdf.vercel.app/#watermark</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

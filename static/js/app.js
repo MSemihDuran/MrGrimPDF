@@ -529,25 +529,51 @@ function removeRedactTerm(term) {
     renderRedactTerms();
 }
 
+function toggleMobileDrawer() {
+    const drawer = document.getElementById('mobileDrawer');
+    if (drawer) {
+        drawer.classList.toggle('active');
+    }
+}
+
+function toggleFaq(item) {
+    item.classList.toggle('active');
+}
+
 function initCanvas() {
     const canvas = document.getElementById('drawingCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
+    const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return {
+                x: e.touches[0].clientX - rect.left,
+                y: e.touches[0].clientY - rect.top
+            };
+        }
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    };
+
     const startDraw = (e) => {
         state.isDrawing = true;
         ctx.beginPath();
-        const rect = canvas.getBoundingClientRect();
-        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        const pos = getPos(e);
+        ctx.moveTo(pos.x, pos.y);
     };
 
     const draw = (e) => {
         if (!state.isDrawing) return;
-        const rect = canvas.getBoundingClientRect();
+        if (e.cancelable) e.preventDefault();
+        const pos = getPos(e);
         ctx.strokeStyle = state.canvasColor;
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
-        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
     };
 
@@ -560,9 +586,16 @@ function initCanvas() {
     canvas.addEventListener('mouseup', stopDraw);
     canvas.addEventListener('mouseleave', stopDraw);
 
-    document.getElementById('canvasColorPicker').addEventListener('change', (e) => {
-        state.canvasColor = e.target.value;
-    });
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+
+    const colorPicker = document.getElementById('canvasColorPicker');
+    if (colorPicker) {
+        colorPicker.addEventListener('change', (e) => {
+            state.canvasColor = e.target.value;
+        });
+    }
 }
 
 function setCanvasMode(mode) {
@@ -709,7 +742,11 @@ function addToSessionHistory(filename, url) {
 }
 
 function updateHistoryBadge() {
-    document.getElementById('sessionFilesBadge').textContent = state.sessionHistory.length;
+    const count = state.sessionHistory.length;
+    const badgeDesktop = document.getElementById('sessionFilesBadge');
+    if (badgeDesktop) badgeDesktop.textContent = count;
+    const badgeMobile = document.getElementById('sessionFilesBadgeMobile');
+    if (badgeMobile) badgeMobile.textContent = count;
 }
 
 function openMyFilesModal() {

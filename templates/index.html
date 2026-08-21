@@ -2,28 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    
     <title>MrGrimPDF - 100% Free & Unlimited All-in-One Online & Local PDF Suite</title>
     <meta name="title" content="MrGrimPDF - 100% Free & Unlimited All-in-One Online & Local PDF Suite">
     <meta name="description" content="The ultimate 100% free, unlimited, open-source and privacy-focused iLovePDF alternative. Merge, Split, Compress, Convert (Word, Excel, PPTX, JPG), OCR, Watermark, Sign, Protect, and Edit PDFs without file limits, subscriptions, or third-party server tracking. Works online & 100% locally offline.">
-    <meta name="keywords" content="free pdf tools, ilovepdf alternative, merge pdf free, split pdf online, compress pdf without limits, convert pdf to word, pdf to excel converter, scanned pdf ocr, protect pdf aes 256, sign pdf online, redact pdf, watermark pdf, open source pdf tools, self-hosted pdf editor, local pdf processor, unlimited pdf suite, mrgrimpdf">
-    <meta name="author" content="MrGrimPDF">
-    <meta name="robots" content="index, follow">
+    <meta name="keywords" content="free pdf tools, ilovepdf alternative, merge pdf free, split pdf online, compress pdf without limits, convert pdf to word, pdf to excel converter, scanned pdf ocr, protect pdf aes 256, sign pdf online, redact pdf, watermark pdf, open source pdf tools, self-hosted pdf editor, local pdf processor, unlimited pdf suite, mrgrimpdf, vercel pdf editor">
+    <meta name="author" content="MSemihDuran">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
     <meta name="theme-color" content="#4f46e5">
-    <link rel="canonical" href="https://mrgrimpdf.com/">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MrGrimPDF">
+    <link rel="canonical" href="https://mr-grim-pdf.vercel.app/">
+    <link rel="manifest" href="/manifest.json">
 
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://mrgrimpdf.com/">
+    <meta property="og:url" content="https://mr-grim-pdf.vercel.app/">
     <meta property="og:title" content="MrGrimPDF - 100% Free & Unlimited All-in-One PDF Suite">
     <meta property="og:description" content="All the PDF tools you need in one place. No subscriptions, no file size limits, 100% private and open-source.">
-    <meta property="og:image" content="/static/img/logo.png">
+    <meta property="og:image" content="https://mr-grim-pdf.vercel.app/static/img/logo.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
     <meta property="og:site_name" content="MrGrimPDF">
 
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mrgrimpdf.com/">
+    <meta property="twitter:url" content="https://mr-grim-pdf.vercel.app/">
     <meta property="twitter:title" content="MrGrimPDF - Free & Unlimited PDF Suite">
     <meta property="twitter:description" content="Privacy-first, self-hosted & online PDF editor. Merge, convert, compress, sign, and protect documents with zero limits.">
-    <meta property="twitter:image" content="/static/img/logo.png">
+    <meta property="twitter:image" content="https://mr-grim-pdf.vercel.app/static/img/logo.png">
 
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
     <link rel="apple-touch-icon" href="/static/img/logo.png">
@@ -31,33 +39,76 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "MrGrimPDF",
-      "url": "https://mrgrimpdf.com",
-      "description": "100% Free & Unlimited open-source PDF Suite for merging, splitting, compressing, converting, and editing PDF files locally or online.",
-      "applicationCategory": "ProductivityApplication",
-      "operatingSystem": "All (Web, Windows, Linux, MacOS)",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "ratingCount": "1280"
-      },
-      "featureList": [
-        "Merge multiple PDF files",
-        "Split and extract PDF pages",
-        "High-ratio PDF compression",
-        "PDF to Word, Excel, PPTX, Images conversion",
-        "Full multi-language OCR recognition",
-        "AES-256 PDF encryption & protection",
-        "Electronic signature drawing and stamping",
-        "Permanent redaction and censorship",
-        "Visual PDF revision comparison",
-        "Self-hosted and 100% local offline mode"
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://mr-grim-pdf.vercel.app/#webapp",
+          "name": "MrGrimPDF",
+          "url": "https://mr-grim-pdf.vercel.app/",
+          "description": "100% Free & Unlimited open-source PDF Suite for merging, splitting, compressing, converting, and editing PDF files locally or online.",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "All (Web, Windows, Linux, MacOS, iOS, Android)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "ratingCount": "1420"
+          },
+          "featureList": [
+            "Merge multiple PDF files without limits",
+            "Split and extract PDF pages",
+            "High-ratio PDF compression up to 75%",
+            "PDF to Word (.docx), Excel (.xlsx), PPTX, Images conversion",
+            "Full multi-language OCR recognition",
+            "AES-256 PDF encryption & password protection",
+            "Electronic signature drawing and stamping",
+            "Permanent redaction and censorship",
+            "Visual PDF revision comparison",
+            "Mobile-friendly and 100% local offline capable"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://mr-grim-pdf.vercel.app/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is MrGrimPDF really 100% free with no hidden charges or limits?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, MrGrimPDF is completely free, open-source, and unrestricted. There are no paid tiers, watermarks on your output files, or credit card requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are my files and documents secure and private?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. When run locally, files never leave your computer. In the cloud, files are processed in isolated sessions and automatically deleted."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I convert scanned PDFs to Word or Excel?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes! MrGrimPDF includes OCR (Optical Character Recognition) supporting Turkish, English, German, French, and Spanish to turn scanned documents into editable text, Word documents, or Excel tables."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use MrGrimPDF on mobile devices (iPhone, iPad, Android)?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, MrGrimPDF is fully responsive, mobile-optimized, touch-friendly, and can be installed as a PWA on your phone's home screen."
+              }
+            }
+          ]
+        }
       ]
     }
     </script>
@@ -91,7 +142,7 @@
                 </a>
             </div>
 
-            <nav class="nav-center">
+            <nav class="nav-center desktop-nav">
                 <div class="dropdown">
                     <button class="nav-link dropdown-toggle" id="exploreToolsBtn">
                         <span>Explore Tools</span>
@@ -144,10 +195,63 @@
             </nav>
 
             <div class="nav-right">
-                <span class="badge-status-pill"><i class="fa-solid fa-shield-check"></i> 100% Free & Unlimited</span>
-                <button class="btn-gradient" onclick="triggerHeroUpload()">Get Started</button>
+                <span class="badge-status-pill desktop-only"><i class="fa-solid fa-shield-check"></i> 100% Free & Unlimited</span>
+                <button class="btn-gradient desktop-only" onclick="triggerHeroUpload()">Get Started</button>
+                <button class="btn-mobile-menu" id="mobileMenuToggle" onclick="toggleMobileDrawer()" aria-label="Toggle Mobile Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
             </div>
         </header>
+
+        <div class="mobile-drawer" id="mobileDrawer">
+            <div class="mobile-drawer-header">
+                <div class="brand-logo">
+                    <div class="brand-logo-img-wrap">
+                        <img src="/static/img/logo.png" alt="MrGrimPDF Logo" class="brand-img-logo">
+                    </div>
+                    <span class="brand-name">MrGrim<span class="gradient-text">PDF</span></span>
+                </div>
+                <button class="btn-close-studio" onclick="toggleMobileDrawer()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mobile-drawer-content">
+                <div class="mobile-quick-actions">
+                    <button class="btn-gradient btn-block" onclick="toggleMobileDrawer(); triggerHeroUpload();">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF Now
+                    </button>
+                    <button class="btn-outline-glass btn-block mt-2" onclick="toggleMobileDrawer(); openMyFilesModal();">
+                        <i class="fa-solid fa-clock-rotate-left"></i> My Session Files (<span id="sessionFilesBadgeMobile">0</span>)
+                    </button>
+                </div>
+                <div class="mobile-nav-links">
+                    <a href="#features" onclick="toggleMobileDrawer(); scrollToSection('featuresSection');"><i class="fa-solid fa-star text-amber-500"></i> Features</a>
+                    <a href="#plans" onclick="toggleMobileDrawer(); scrollToSection('plansSection');"><i class="fa-solid fa-crown text-indigo-500"></i> Free vs Paid Comparison</a>
+                    <a href="#faq" onclick="toggleMobileDrawer(); scrollToSection('faqSection');"><i class="fa-solid fa-circle-question text-emerald-500"></i> FAQ</a>
+                </div>
+                <div class="mobile-tools-accordion">
+                    <h4>All PDF Tools</h4>
+                    <div class="mobile-tools-grid">
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('merge');"><i class="fa-solid fa-object-group text-rose-500"></i> Merge</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('split');"><i class="fa-solid fa-scissors text-purple-500"></i> Split</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('compress');"><i class="fa-solid fa-down-left-and-up-right-to-center text-cyan-500"></i> Compress</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('edit');"><i class="fa-solid fa-pen-to-square text-amber-500"></i> Edit</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('unlock');"><i class="fa-solid fa-lock-open text-blue-500"></i> Unlock</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('rotate');"><i class="fa-solid fa-rotate-right text-teal-500"></i> Rotate</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('protect');"><i class="fa-solid fa-shield-halved text-indigo-500"></i> Protect</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('pdf-to-word');"><i class="fa-solid fa-file-word text-blue-600"></i> to Word</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('pdf-to-images');"><i class="fa-solid fa-file-image text-amber-600"></i> to Image</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('images-to-pdf');"><i class="fa-solid fa-images text-pink-500"></i> Img to PDF</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('watermark');"><i class="fa-solid fa-stamp text-rose-600"></i> Watermark</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('sign');"><i class="fa-solid fa-signature text-emerald-600"></i> Sign</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('redact');"><i class="fa-solid fa-eraser text-slate-700"></i> Redact</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('ocr');"><i class="fa-solid fa-font text-purple-600"></i> OCR</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('repair');"><i class="fa-solid fa-screwdriver-wrench text-orange-500"></i> Repair</button>
+                        <button class="mobile-tool-btn" onclick="toggleMobileDrawer(); openTool('pdf-to-excel');"><i class="fa-solid fa-file-excel text-green-600"></i> to Excel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <main id="homeView" class="main-content">
             <section class="hero-section">
@@ -168,12 +272,14 @@
             </section>
 
             <section class="tools-filter-bar">
-                <button class="filter-pill active" onclick="filterTools('all')">All 20+ Tools</button>
-                <button class="filter-pill" onclick="filterTools('organize')">Organize & Pages</button>
-                <button class="filter-pill" onclick="filterTools('convert')">Convert Format</button>
-                <button class="filter-pill" onclick="filterTools('optimize')">Optimize & OCR</button>
-                <button class="filter-pill" onclick="filterTools('edit')">Edit & Watermark</button>
-                <button class="filter-pill" onclick="filterTools('security')">Security & Sign</button>
+                <div class="filter-scroll-container">
+                    <button class="filter-pill active" onclick="filterTools('all')">All Tools</button>
+                    <button class="filter-pill" onclick="filterTools('organize')">Organize</button>
+                    <button class="filter-pill" onclick="filterTools('convert')">Convert</button>
+                    <button class="filter-pill" onclick="filterTools('optimize')">Optimize & OCR</button>
+                    <button class="filter-pill" onclick="filterTools('edit')">Edit & Sign</button>
+                    <button class="filter-pill" onclick="filterTools('security')">Security</button>
+                </div>
             </section>
 
             <section class="tools-grid-section">
@@ -377,9 +483,9 @@
                         <p>Your documents are yours. You can run MrGrimPDF completely offline on your local computer or host it privately.</p>
                     </div>
                     <div class="feature-glass-box">
-                        <div class="feature-icon-badge"><i class="fa-solid fa-code-branch text-indigo-500"></i></div>
-                        <h4>Open-Source & Deployable</h4>
-                        <p>Comes with ready Dockerfile, render.yaml and Procfile. Deploy to free cloud hosting in under 2 minutes.</p>
+                        <div class="feature-icon-badge"><i class="fa-solid fa-mobile-screen text-indigo-500"></i></div>
+                        <h4>Mobile & PWA Ready</h4>
+                        <p>Optimized for iPhone, iPad, and Android with touch-friendly gestures, signatures, and instant mobile downloads.</p>
                     </div>
                 </div>
             </section>
@@ -389,36 +495,38 @@
                 <h2 class="section-title">Why MrGrimPDF Beats Paid Services</h2>
                 <p class="section-subtitle">No monthly subscriptions, no fake upload limits, and no privacy compromises.</p>
 
-                <div class="comparison-glass-table">
-                    <div class="table-header">
-                        <div class="col-feature">Feature</div>
-                        <div class="col-paid">iLovePDF (Paid / Free)</div>
-                        <div class="col-grim"><i class="fa-solid fa-crown text-amber-400"></i> MrGrimPDF (Yours)</div>
-                    </div>
-                    <div class="table-row">
-                        <div class="col-feature">Cost</div>
-                        <div class="col-paid">$5 – $9 / month or restricted</div>
-                        <div class="col-grim highlight-text">100% Free Forever (Open-Source)</div>
-                    </div>
-                    <div class="table-row">
-                        <div class="col-feature">File Size Limit</div>
-                        <div class="col-paid">15 MB - 100 MB on Free</div>
-                        <div class="col-grim highlight-text">Unlimited / 500 MB+ Local</div>
-                    </div>
-                    <div class="table-row">
-                        <div class="col-feature">Batch Processing</div>
-                        <div class="col-paid">Max 3 files on Free</div>
-                        <div class="col-grim highlight-text">Unlimited Batch Files</div>
-                    </div>
-                    <div class="table-row">
-                        <div class="col-feature">OCR Full Support</div>
-                        <div class="col-paid">Premium Only</div>
-                        <div class="col-grim highlight-text">Full Multi-Language OCR Included</div>
-                    </div>
-                    <div class="table-row">
-                        <div class="col-feature">Data Privacy & Security</div>
-                        <div class="col-paid">Uploads to 3rd party servers</div>
-                        <div class="col-grim highlight-text">Self-Hosted / Local Machine</div>
+                <div class="comparison-table-wrapper">
+                    <div class="comparison-glass-table">
+                        <div class="table-header">
+                            <div class="col-feature">Feature</div>
+                            <div class="col-paid">iLovePDF (Paid / Free)</div>
+                            <div class="col-grim"><i class="fa-solid fa-crown text-amber-400"></i> MrGrimPDF</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="col-feature">Cost</div>
+                            <div class="col-paid">$5 – $9 / month</div>
+                            <div class="col-grim highlight-text">100% Free Forever</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="col-feature">File Size Limit</div>
+                            <div class="col-paid">15 MB - 100 MB on Free</div>
+                            <div class="col-grim highlight-text">Unlimited / 500 MB+</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="col-feature">Batch Processing</div>
+                            <div class="col-paid">Max 3 files on Free</div>
+                            <div class="col-grim highlight-text">Unlimited Batch Files</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="col-feature">OCR Full Support</div>
+                            <div class="col-paid">Premium Only</div>
+                            <div class="col-grim highlight-text">Multi-Language OCR Included</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="col-feature">Mobile & Privacy</div>
+                            <div class="col-paid">Cloud tracking</div>
+                            <div class="col-grim highlight-text">Private & Mobile Ready</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -429,21 +537,33 @@
                 <p class="section-subtitle">Everything you need to know about MrGrimPDF</p>
 
                 <div class="faq-accordion">
-                    <div class="faq-item">
-                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Is MrGrimPDF really 100% free with no hidden charges?</h3>
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-header-row">
+                            <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Is MrGrimPDF really 100% free with no hidden charges?</h3>
+                            <i class="fa-solid fa-chevron-down faq-chevron"></i>
+                        </div>
                         <p class="faq-answer">Yes, MrGrimPDF is completely free, open-source, and unrestricted. There are no paid tiers, watermarks on your output files, or credit card requirements.</p>
                     </div>
-                    <div class="faq-item">
-                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Are my files and documents secure?</h3>
-                        <p class="faq-answer">Absolutely. When run locally on your computer, your documents never leave your machine. When run on web servers, files are processed in isolated sessions and automatically purged after processing.</p>
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-header-row">
+                            <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Are my files and documents secure?</h3>
+                            <i class="fa-solid fa-chevron-down faq-chevron"></i>
+                        </div>
+                        <p class="faq-answer">Absolutely. When run locally on your computer, your documents never leave your machine. In the cloud, files are processed in isolated sessions and automatically purged after processing.</p>
                     </div>
-                    <div class="faq-item">
-                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I convert scanned PDF to Word or Excel?</h3>
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-header-row">
+                            <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I convert scanned PDF to Word or Excel?</h3>
+                            <i class="fa-solid fa-chevron-down faq-chevron"></i>
+                        </div>
                         <p class="faq-answer">Yes! MrGrimPDF includes OCR (Optical Character Recognition) supporting Turkish, English, German, French, and Spanish to turn scanned documents into editable text, Word documents, or Excel tables.</p>
                     </div>
-                    <div class="faq-item">
-                        <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I deploy MrGrimPDF to my own domain or free hosting?</h3>
-                        <p class="faq-answer">Yes, MrGrimPDF comes with pre-configured Dockerfile, render.yaml, and Procfile so you can host it for free on Render.com, Hugging Face Spaces, Railway, or on your private VPS.</p>
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-header-row">
+                            <h3 class="faq-question"><i class="fa-solid fa-circle-question text-indigo-500"></i> Can I use MrGrimPDF on mobile devices?</h3>
+                            <i class="fa-solid fa-chevron-down faq-chevron"></i>
+                        </div>
+                        <p class="faq-answer">Yes, MrGrimPDF is designed from the ground up to be 100% responsive on smartphones and tablets. You can draw signatures, merge, split, and convert documents directly in mobile browsers.</p>
                     </div>
                 </div>
             </section>
@@ -471,7 +591,7 @@
                         <div class="stage-drop-hint" id="stageDropHint">
                             <i class="fa-solid fa-cloud-arrow-up text-4xl mb-3"></i>
                             <h3>Upload your PDF or files here</h3>
-                            <p>Drag and drop or click to select</p>
+                            <p>Drag & drop or tap to select</p>
                             <input type="file" id="studioFileInput" multiple style="display:none;">
                             <button class="btn-choose-files mt-4" onclick="document.getElementById('studioFileInput').click()">
                                 Choose Files
@@ -481,7 +601,7 @@
                             <div class="thumbnails-toolbar">
                                 <span id="totalPagesBadge" class="badge-pages">0 Pages</span>
                                 <div class="toolbar-actions" id="thumbnailQuickActions">
-                                    <button class="btn-tool-sm" onclick="rotateAllPages(90)"><i class="fa-solid fa-rotate-right"></i> Rotate All</button>
+                                    <button class="btn-tool-sm" onclick="rotateAllPages(90)"><i class="fa-solid fa-rotate-right"></i> Rotate</button>
                                     <button class="btn-tool-sm" onclick="selectAllPages()"><i class="fa-solid fa-check-double"></i> Select All</button>
                                 </div>
                             </div>
@@ -491,13 +611,13 @@
                         <div class="stage-canvas-container" id="stageCanvasContainer" style="display: none;">
                             <div class="canvas-controls">
                                 <button class="btn-tool-sm active" id="drawPenBtn" onclick="setCanvasMode('pen')"><i class="fa-solid fa-pen"></i> Pen</button>
-                                <button class="btn-tool-sm" id="drawRectBtn" onclick="setCanvasMode('rect')"><i class="fa-solid fa-square"></i> Rectangle</button>
+                                <button class="btn-tool-sm" id="drawRectBtn" onclick="setCanvasMode('rect')"><i class="fa-solid fa-square"></i> Box</button>
                                 <button class="btn-tool-sm" id="drawTextBtn" onclick="setCanvasMode('text')"><i class="fa-solid fa-font"></i> Text</button>
                                 <input type="color" id="canvasColorPicker" value="#E11D48" class="color-picker-input">
                                 <button class="btn-tool-sm" onclick="clearCanvas()"><i class="fa-solid fa-trash"></i> Clear</button>
                             </div>
                             <div class="canvas-wrapper">
-                                <canvas id="drawingCanvas" width="600" height="400"></canvas>
+                                <canvas id="drawingCanvas" width="600" height="360"></canvas>
                             </div>
                         </div>
                     </div>
@@ -551,7 +671,7 @@
                 <span>&copy; 2026 MrGrimPDF - Private, Free, Unlimited & Open-Source PDF Suite</span>
             </div>
             <div class="footer-right">
-                <span>Built with Python & PyMuPDF Engine</span>
+                <a href="https://mr-grim-pdf.vercel.app/" class="footer-link">mr-grim-pdf.vercel.app</a>
             </div>
         </footer>
     </div>
