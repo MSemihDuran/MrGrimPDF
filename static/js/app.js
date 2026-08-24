@@ -439,22 +439,25 @@ function renderDynamicToolOptions(toolKey) {
         case 'compress':
             container.innerHTML = `
                 <div class="config-group">
-                    <label class="config-label">Compression Level</label>
+                    <label class="config-label">Sıkıştırma Seviyesi (Compression Level)</label>
                     <div class="compression-cards">
-                        <div class="comp-card active" onclick="selectCompLevel('recommended', this)">
-                            <div class="comp-card-title"><i class="fa-solid fa-star text-amber-500"></i> Recommended</div>
-                            <div class="comp-card-desc">Optimal balance between file size & high image quality (~50% smaller).</div>
+                        <div class="comp-card ${state.compressLevel === 'recommended' ? 'active' : ''}" onclick="selectCompLevel('recommended', this)">
+                            <div class="comp-card-title"><i class="fa-solid fa-star text-amber-500"></i> Önerilen (Recommended)</div>
+                            <div class="comp-card-desc">Yüksek netlik & dengeli sıkıştırma. Yazıların ve görsellerin kristal netliğini korurken dosya boyutunu küçültür.</div>
                         </div>
-                        <div class="comp-card" onclick="selectCompLevel('extreme', this)">
-                            <div class="comp-card-title"><i class="fa-solid fa-fire text-rose-500"></i> Extreme Compression</div>
-                            <div class="comp-card-desc">Maximum reduction for strict size limits (~70% smaller).</div>
+                        <div class="comp-card ${state.compressLevel === 'extreme' ? 'active' : ''}" onclick="selectCompLevel('extreme', this)">
+                            <div class="comp-card-title"><i class="fa-solid fa-fire text-rose-500"></i> Ekstrem Sıkıştırma (Extreme)</div>
+                            <div class="comp-card-desc">Maksimum dosya küçültme (%70-90 tasarruf). E-posta ve WhatsApp paylaşımı için en hafif dosya boyutu.</div>
                         </div>
-                        <div class="comp-card" onclick="selectCompLevel('low', this)">
-                            <div class="comp-card-title"><i class="fa-solid fa-gem text-blue-500"></i> Low Compression</div>
-                            <div class="comp-card-desc">Lossless stream compression with zero visible quality loss.</div>
+                        <div class="comp-card ${state.compressLevel === 'low' ? 'active' : ''}" onclick="selectCompLevel('low', this)">
+                            <div class="comp-card-title"><i class="fa-solid fa-gem text-blue-500"></i> Düşük Sıkıştırma (Low)</div>
+                            <div class="comp-card-desc">Baskı ve orijinal görsel kalitesini birebir korur. Minimum kayıp ile hafif yapısal optimizasyon sağlar.</div>
                         </div>
                     </div>
                 </div>
+                <p style="font-size:0.78rem; color:#64748b; line-height:1.45; margin-top:10px;">
+                    <i class="fa-solid fa-shield-check text-emerald-500"></i> Tüm sıkıştırma modlarımız sayfalardaki seçilebilir metinleri, fontları ve vektör keskinliğini koruyarak akıllı görsel optimizasyonu yapar.
+                </p>
             `;
             break;
 
