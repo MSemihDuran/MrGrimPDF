@@ -160,6 +160,15 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
     if len(doc) == 0:
         doc.new_page(width=page_w, height=page_h)
 
-    doc.save(output_path)
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(out_dir, exist_ok=True)
+    
+    if os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except Exception:
+            pass
+
+    doc.save(output_path, deflate=True)
     doc.close()
     return output_path

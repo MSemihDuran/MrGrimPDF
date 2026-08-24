@@ -18,17 +18,33 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mrgrimpdf-super-secret-key-2026'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-OUTPUT_FOLDER = os.path.join(BASE_DIR, 'outputs')
+import tempfile
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Vercel Serverless environment: /var/task is read-only, only /tmp is writable
+is_serverless = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or not os.access(BASE_DIR, os.W_OK))
+
+if is_serverless:
+    TEMP_DIR = tempfile.gettempdir()
+    UPLOAD_FOLDER = os.path.join(TEMP_DIR, 'mrgrimpdf_uploads')
+    OUTPUT_FOLDER = os.path.join(TEMP_DIR, 'mrgrimpdf_outputs')
+else:
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    OUTPUT_FOLDER = os.path.join(BASE_DIR, 'outputs')
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+except Exception:
+    pass
 
 def cleanup_old_files(max_age_seconds=3600):
     now = time.time()
     for folder in [UPLOAD_FOLDER, OUTPUT_FOLDER]:
         try:
+            if not os.path.exists(folder):
+                continue
             for filename in os.listdir(folder):
                 file_path = os.path.join(folder, filename)
                 if os.path.isfile(file_path) and not filename.startswith('.'):
