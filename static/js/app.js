@@ -937,29 +937,19 @@ async function executeCurrentTool() {
             formData.append('margin_unit', margUnit);
         }
 
-        // 1. If images are attached in gallery, upload them first in user's exact order
-        let uploadedImgIds = [];
+        // 1. Attach all gallery images directly in user's exact order (Single atomic request)
         if (state.createImages.length > 0) {
-            const imgFormData = new FormData();
             state.createImages.forEach(item => {
-                imgFormData.append('files', item.file);
-            });
-            try {
-                const upRes = await fetch('/api/upload', { method: 'POST', body: imgFormData });
-                const upData = await upRes.json();
-                if (upData.success && upData.files) {
-                    uploadedImgIds = upData.files.map(f => f.file_id);
+                if (item.file) {
+                    formData.append('images', item.file);
                 }
-            } catch (err) {
-                console.error('Image upload failed', err);
-            }
+            });
         }
 
         formData.append('title', title);
         formData.append('content', content);
         formData.append('page_size', pageSize);
         formData.append('orientation', orientation);
-        formData.append('image_ids', JSON.stringify(uploadedImgIds));
 
         // Format default date & time filename
         const now = new Date();

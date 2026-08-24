@@ -402,9 +402,29 @@ def process_action(action):
             orientation = data.get('orientation', 'portrait')
             page_size = data.get('page_size', 'a4')
             
-            # Handle attached images in user's specific order
-            image_ids = json.loads(data.get('image_ids', '[]'))
-            image_paths = [os.path.join(UPLOAD_FOLDER, secure_filename(fid)) for fid in image_ids if fid]
+            # 1. Direct multipart image uploads (100% serverless safe - single request)
+            uploaded_images = request.files.getlist('images') or request.files.getlist('files')
+            image_paths = []
+            if uploaded_images:
+                for idx, img_file in enumerate(uploaded_images):
+                    if img_file and img_file.filename:
+                        safe_orig = secure_filename(img_file.filename) or f"img_{idx}.png"
+                        tmp_name = f"create_{out_id}_{idx}_{safe_orig}"
+                        tmp_path = os.path.join(UPLOAD_FOLDER, tmp_name)
+                        img_file.save(tmp_path)
+                        image_paths.append(tmp_path)
+                        
+            # 2. Fallback to image_ids if sent as JSON string
+            if not image_paths and data.get('image_ids'):
+                try:
+                    image_ids = json.loads(data.get('image_ids', '[]'))
+                    for fid in image_ids:
+                        if fid:
+                            p = os.path.join(UPLOAD_FOLDER, secure_filename(fid))
+                            if os.path.exists(p):
+                                image_paths.append(p)
+                except Exception:
+                    pass
             
             # Format filename with current date & time or custom name
             import datetime

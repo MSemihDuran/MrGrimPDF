@@ -49,14 +49,14 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
     if page_key == 'custom' and custom_w and custom_h:
         page_w = parse_dimension_to_points(custom_w, custom_unit)
         page_h = parse_dimension_to_points(custom_h, custom_unit)
-        if page_w <= 0: page_w = 595
-        if page_h <= 0: page_h = 842
+        if page_w <= 0: page_w = 595.0
+        if page_h <= 0: page_h = 842.0
     elif page_key in STANDARD_SIZES:
-        page_w, page_h = STANDARD_SIZES[page_key]
+        page_w, page_h = [float(x) for x in STANDARD_SIZES[page_key]]
     elif page_key == 'fit':
-        page_w, page_h = (595, 842) # fallback if text
+        page_w, page_h = (595.0, 842.0)
     else:
-        page_w, page_h = (595, 842) # default A4
+        page_w, page_h = (595.0, 842.0) # default A4
         
     if orientation.lower() == 'landscape':
         page_w, page_h = max(page_w, page_h), min(page_w, page_h)
@@ -76,32 +76,34 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
         margin = 32.0 # ~11mm
 
     has_text = bool(content and content.strip())
-    has_title = bool(title and title.strip() and title.strip() != 'Untitled Document')
+    has_title = bool(title and title.strip() and title.strip() not in ['Untitled Document', 'Başlıksız Belge'])
+    valid_images = [img for img in (images or []) if os.path.exists(img)]
     
-    # CASE A: ONLY IMAGES (Images to PDF Mode)
-    if images and isinstance(images, list) and not has_text and not has_title:
-        for img_path in images:
-            if os.path.exists(img_path):
-                try:
-                    img = Image.open(img_path)
-                    img_w, img_h = img.size
-                    
-                    if page_key == 'fit':
-                        # Match page exact size to image (no distortion or borders)
-                        cur_w = float(img_w)
-                        cur_h = float(img_h)
-                        page = doc.new_page(width=cur_w, height=cur_h)
-                        rect = fitz.Rect(0, 0, cur_w, cur_h)
-                        page.insert_image(rect, filename=img_path)
+    # CASE A: IMAGES PRESENT (Gallery / Images to PDF Mode)
+    if valid_images and not has_text:
+        for img_path in valid_images:
+            try:
+                img = Image.open(img_path)
+                img_w, img_h = img.size
+                
+                if page_key == 'fit':
+                    cur_w = float(img_w)
+                    cur_h = float(img_h)
+                    page = doc.new_page(width=cur_w, height=cur_h)
+                    rect = fitz.Rect(0, 0, cur_w, cur_h)
+                    page.insert_image(rect, filename=img_path)
+                else:
+                    page = doc.new_page(width=page_w, height=page_h)
+                    if margin <= 0:
+                        target_rect = fitz.Rect(0, 0, page_w, page_h)
                     else:
-                        page = doc.new_page(width=page_w, height=page_h)
                         target_rect = fitz.Rect(margin, margin, page_w - margin, page_h - margin)
-                        page.insert_image(target_rect, filename=img_path, keep_proportion=True)
-                except Exception as e:
-                    print(f"Error embedding image {img_path}: {e}")
-                    
-    # CASE B: TEXT + IMAGES OR DOCUMENT MODE
-    else:
+                    page.insert_image(target_rect, filename=img_path, keep_proportion=True)
+            except Exception as e:
+                print(f"Error embedding image {img_path}: {e}")
+                
+    # CASE B: TEXT + OPTIONAL IMAGES DOCUMENT MODE
+    elif has_text or has_title or not valid_images:
         doc_margin = max(margin, 25.0)
         y = doc_margin
         page = doc.new_page(width=page_w, height=page_h)
@@ -146,16 +148,15 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
             y += 20
 
         # Add Embedded Images
-        if images and isinstance(images, list):
-            for img_path in images:
-                if os.path.exists(img_path):
-                    if y > page_h - 260:
-                        page = doc.new_page(width=page_w, height=page_h)
-                        y = doc_margin
-                        
-                    img_rect = fitz.Rect(doc_margin, y, page_w - doc_margin, min(y + 320, page_h - doc_margin))
-                    page.insert_image(img_rect, filename=img_path, keep_proportion=True)
-                    y += 340
+        if valid_images:
+            for img_path in valid_images:
+                if y > page_h - 260:
+                    page = doc.new_page(width=page_w, height=page_h)
+                    y = doc_margin
+                    
+                img_rect = fitz.Rect(doc_margin, y, page_w - doc_margin, min(y + 320, page_h - doc_margin))
+                page.insert_image(img_rect, filename=img_path, keep_proportion=True)
+                y += 340
 
     if len(doc) == 0:
         doc.new_page(width=page_w, height=page_h)
