@@ -4,7 +4,8 @@ import json
 import time
 import shutil
 import fitz
-from flask import Flask, render_template, request, jsonify, send_file, url_for
+from flask import Flask, render_template, request, jsonify, send_file
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from modules.organize import merge_pdfs, split_pdf, remove_pages, reorder_pages, rotate_pages, crop_pdf
@@ -38,6 +39,25 @@ try:
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 except Exception:
     pass
+
+@app.errorhandler(RequestEntityTooLarge)
+def file_too_large(_error):
+    return jsonify({"error": "Dosya boyutu 500 MB sınırını aşıyor."}), 413
+
+def json_value(data, key, default, expected_type):
+    """Parse a JSON form field and return a safe, user-facing validation error."""
+    raw_value = data.get(key)
+    if raw_value in (None, ''):
+        return default
+    if isinstance(raw_value, expected_type):
+        return raw_value
+    try:
+        value = json.loads(raw_value)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Invalid {key} value.") from exc
+    if not isinstance(value, expected_type):
+        raise ValueError(f"Invalid {key} value.")
+    return value
 
 def cleanup_old_files(max_age_seconds=3600):
     now = time.time()
@@ -217,7 +237,7 @@ def process_action(action):
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             mode = data.get('mode', 'all')
             ranges = data.get('ranges', '')
-            extract_pages = json.loads(data.get('extract_pages', '[]'))
+            extract_pages = json_value(data, 'extract_pages', [], list)
             out_path = split_pdf(file_path, OUTPUT_FOLDER, mode=mode, ranges_str=ranges, extract_pages=extract_pages)
             out_filename = os.path.basename(out_path)
 
@@ -225,7 +245,7 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            pages = json.loads(data.get('pages', '[]'))
+            pages = json_value(data, 'pages', [], list)
             out_filename = f"MrGrimPDF_Removed_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             remove_pages(file_path, out_path, pages)
@@ -234,7 +254,7 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            order = json.loads(data.get('order', '[]'))
+            order = json_value(data, 'order', [], list)
             out_filename = f"MrGrimPDF_Organized_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             reorder_pages(file_path, out_path, order)
@@ -243,11 +263,12 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            rot_map = json.loads(data.get('rotations', '{}'))
+            rot_map = json_value(data, 'rotations', {}, dict)
             global_angle = int(data.get('global_angle', 0))
+            removed_pages = json_value(data, 'remove_pages', [], list)
             out_filename = f"MrGrimPDF_Rotated_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
-            rotate_pages(file_path, out_path, rot_map, global_angle)
+            rotate_pages(file_path, out_path, rot_map, global_angle, removed_pages)
 
         elif action == 'crop':
             file_path = get_primary_file(request, data, out_id)
@@ -273,8 +294,8 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            fmt = data.get('format', 'jpg')
-            dpi = int(data.get('dpi', 150))
+            fmt = data.get('format', 'jpg').lower()
+            dpi = max(72, min(int(data.get('dpi', 150)), 600))
             out_path = pdf_to_images(file_path, OUTPUT_FOLDER, img_format=fmt, dpi=dpi)
             out_filename = os.path.basename(out_path)
 
@@ -389,10 +410,15 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            annots = json.loads(data.get('annotations', '[]'))
+            annots = json_value(data, 'annotations', [], list)
+            overlay_path = None
+            if 'annotation_image' in files and files['annotation_image'].filename:
+                overlay = files['annotation_image']
+                overlay_path = os.path.join(UPLOAD_FOLDER, f"annot_{out_id}_{secure_filename(overlay.filename)}")
+                overlay.save(overlay_path)
             out_filename = f"MrGrimPDF_Edited_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
-            apply_annotations(file_path, out_path, annots)
+            apply_annotations(file_path, out_path, annots, overlay_path, int(data.get('page', 1)))
 
         elif action == 'protect':
             file_path = get_primary_file(request, data, out_id)
@@ -445,8 +471,8 @@ def process_action(action):
             file_path = get_primary_file(request, data, out_id)
             if not file_path:
                 return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
-            search_terms = json.loads(data.get('terms', '[]'))
-            rects = json.loads(data.get('rectangles', '[]'))
+            search_terms = json_value(data, 'terms', [], list)
+            rects = json_value(data, 'rectangles', [], list)
             out_filename = f"MrGrimPDF_Redacted_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             redact_pdf(file_path, out_path, search_terms=search_terms, custom_rects=rects)

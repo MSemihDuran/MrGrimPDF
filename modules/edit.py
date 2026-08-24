@@ -1,5 +1,7 @@
 import os
+import tempfile
 import fitz
+from PIL import Image
 
 def hex_to_rgb_float(hex_str):
     hex_str = hex_str.lstrip('#')
@@ -14,6 +16,19 @@ def add_watermark(file_path, output_path, wm_type='text', text='CONFIDENTIAL',
                   font_size=48, color='#E11D48', layer='over'):
     doc = fitz.open(file_path)
     rgb_color = hex_to_rgb_float(color)
+    prepared_image_path = image_path
+    temp_image_path = None
+    if wm_type == 'image' and image_path and os.path.exists(image_path) and float(opacity) < 1:
+        # PyMuPDF's image insertion has no opacity parameter. Prepare a
+        # transparent PNG once, then reuse it on every page.
+        with Image.open(image_path).convert('RGBA') as source:
+            alpha = source.getchannel('A').point(lambda value: int(value * max(0.0, min(float(opacity), 1.0))))
+            source.putalpha(alpha)
+            handle = tempfile.NamedTemporaryFile(prefix='mrgrimpdf_wm_', suffix='.png', delete=False)
+            temp_image_path = handle.name
+            handle.close()
+            source.save(temp_image_path, 'PNG')
+        prepared_image_path = temp_image_path
     
     for page in doc:
         rect = page.rect
@@ -42,11 +57,12 @@ def add_watermark(file_path, output_path, wm_type='text', text='CONFIDENTIAL',
                 color=rgb_color,
                 morph=morph_param,
                 render_mode=0,
-                overlay=True if layer == 'over' else False
+                overlay=True if layer == 'over' else False,
+                fill_opacity=max(0.0, min(float(opacity), 1.0)),
             )
             
-        elif wm_type == 'image' and image_path and os.path.exists(image_path):
-            img_doc = fitz.open(image_path)
+        elif wm_type == 'image' and prepared_image_path and os.path.exists(prepared_image_path):
+            img_doc = fitz.open(prepared_image_path)
             img_rect = img_doc[0].rect
             aspect = img_rect.width / img_rect.height if img_rect.height else 1
             
@@ -69,13 +85,17 @@ def add_watermark(file_path, output_path, wm_type='text', text='CONFIDENTIAL',
             target_rect = fitz.Rect(x0, y0, x0 + target_w, y0 + target_h)
             page.insert_image(
                 target_rect,
-                filename=image_path,
-                overlay=True if layer == 'over' else False
+                filename=prepared_image_path,
+                overlay=True if layer == 'over' else False,
             )
             img_doc.close()
             
-    doc.save(output_path, garbage=4, deflate=True)
-    doc.close()
+    try:
+        doc.save(output_path, garbage=4, deflate=True)
+    finally:
+        doc.close()
+        if temp_image_path and os.path.exists(temp_image_path):
+            os.remove(temp_image_path)
     return output_path
 
 def add_page_numbers(file_path, output_path, format_str='{page} / {total}',
@@ -127,7 +147,7 @@ def add_page_numbers(file_path, output_path, format_str='{page} / {total}',
     doc.close()
     return output_path
 
-def apply_annotations(file_path, output_path, annotations):
+def apply_annotations(file_path, output_path, annotations, overlay_image_path=None, overlay_page=1):
     doc = fitz.open(file_path)
     total_pages = len(doc)
     
@@ -160,6 +180,16 @@ def apply_annotations(file_path, output_path, annotations):
                     shape.draw_line(fitz.Point(points[k]['x'], points[k]['y']), fitz.Point(points[k+1]['x'], points[k+1]['y']))
                 shape.finish(color=color, width=item.get('strokeWidth', 2))
                 shape.commit()
+
+    if overlay_image_path and os.path.exists(overlay_image_path):
+        page_index = int(overlay_page) - 1
+        if not 0 <= page_index < total_pages:
+            doc.close()
+            raise ValueError("The selected annotation page does not exist.")
+        # The client canvas has a transparent background; mapping it to the
+        # complete PDF page preserves all pen, box and text marks as one overlay.
+        page = doc[page_index]
+        page.insert_image(page.rect, filename=overlay_image_path, overlay=True, keep_proportion=False)
                 
     doc.save(output_path, garbage=4, deflate=True)
     doc.close()

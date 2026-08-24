@@ -19,10 +19,13 @@ def compress_pdf(file_path, output_path, level='recommended'):
         img_quality = 65
         max_dim = 1400
 
+    processed_xrefs = set()
     for page in doc:
-        img_list = page.get_images(full=True)
-        for img_info in img_list:
+        for img_info in page.get_images(full=True):
             xref = img_info[0]
+            if xref in processed_xrefs:
+                continue
+            processed_xrefs.add(xref)
             try:
                 base_image = doc.extract_image(xref)
                 if not base_image:
@@ -39,7 +42,7 @@ def compress_pdf(file_path, output_path, level='recommended'):
                     new_h = int(orig_h * scale)
                     pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
                 
-                if pil_img.mode in ("RGBA", "P") and img_ext.lower() in ['jpg', 'jpeg']:
+                if pil_img.mode in ("RGBA", "P"):
                     pil_img = pil_img.convert("RGB")
                     
                 out_io = io.BytesIO()
@@ -51,7 +54,10 @@ def compress_pdf(file_path, output_path, level='recommended'):
                 compressed_bytes = out_io.getvalue()
                 
                 if len(compressed_bytes) < len(image_bytes):
-                    doc.update_stream(xref, compressed_bytes)
+                    # update_stream only changes bytes, not the image object's
+                    # filter metadata; replace_image updates both and prevents
+                    # broken/corrupted PDFs after compression.
+                    page.replace_image(xref, stream=compressed_bytes)
             except Exception:
                 continue
 
@@ -95,20 +101,17 @@ def ocr_pdf(file_path, output_path, lang='tur+eng'):
     ocr_doc = fitz.open()
 
     for i, page in enumerate(doc):
-        pix = page.get_pixmap(dpi=150)
-        img_bytes = pix.tobytes("png")
-        
         try:
             page_ocr_pdf = fitz.open("pdf", page.get_pdf_ocr(language=lang, dpi=150))
             ocr_doc.insert_pdf(page_ocr_pdf)
             page_ocr_pdf.close()
-        except Exception:
-            img_doc = fitz.open("png", img_bytes)
-            pdf_bytes = img_doc.convert_to_pdf()
-            temp_pdf = fitz.open("pdf", pdf_bytes)
-            ocr_doc.insert_pdf(temp_pdf)
-            img_doc.close()
-            temp_pdf.close()
+        except Exception as exc:
+            ocr_doc.close()
+            doc.close()
+            raise RuntimeError(
+                "OCR could not run. Install Tesseract and the selected language data "
+                f"on the server. Details: {exc}"
+            ) from exc
 
     ocr_doc.save(output_path, garbage=4, deflate=True)
     ocr_doc.close()

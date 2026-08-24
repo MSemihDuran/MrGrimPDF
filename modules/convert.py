@@ -2,6 +2,9 @@ import os
 import fitz
 from PIL import Image
 import zipfile
+import shutil
+import subprocess
+import tempfile
 import xlsxwriter
 from pptx import Presentation
 from pptx.util import Inches
@@ -14,6 +17,10 @@ def pdf_to_word(file_path, output_path):
     return output_path
 
 def pdf_to_images(file_path, output_dir, img_format='jpg', dpi=150):
+    img_format = img_format.lower()
+    if img_format not in {'jpg', 'jpeg', 'png'}:
+        raise ValueError("Image format must be JPG or PNG.")
+    dpi = max(72, min(int(dpi), 600))
     doc = fitz.open(file_path)
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     created_images = []
@@ -41,22 +48,21 @@ def pdf_to_images(file_path, output_dir, img_format='jpg', dpi=150):
 
 def images_to_pdf(image_paths, output_path):
     pdf_doc = fitz.open()
-    for img_path in image_paths:
-        if os.path.exists(img_path):
-            img = Image.open(img_path)
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            
-            img_doc = fitz.open(img_path)
-            rect = img_doc[0].rect
-            pdf_bytes = img_doc.convert_to_pdf()
-            img_pdf = fitz.open("pdf", pdf_bytes)
-            pdf_doc.insert_pdf(img_pdf)
-            img_doc.close()
-            img_pdf.close()
-            
-    pdf_doc.save(output_path)
-    pdf_doc.close()
+    try:
+        for img_path in image_paths:
+            if not os.path.exists(img_path):
+                continue
+            # Converting via MuPDF preserves each image's native dimensions and
+            # supports JPEG, PNG, WebP, and common camera image formats.
+            with fitz.open(img_path) as img_doc:
+                pdf_bytes = img_doc.convert_to_pdf()
+            with fitz.open("pdf", pdf_bytes) as img_pdf:
+                pdf_doc.insert_pdf(img_pdf)
+        if not len(pdf_doc):
+            raise ValueError("No readable image files were provided.")
+        pdf_doc.save(output_path, garbage=4, deflate=True)
+    finally:
+        pdf_doc.close()
     return output_path
 
 def pdf_to_excel(file_path, output_path):
@@ -102,31 +108,46 @@ def pdf_to_pptx(file_path, output_path, dpi=120):
     blank_slide_layout = prs.slide_layouts[6]
     
     doc = fitz.open(file_path)
-    temp_dir = os.path.dirname(output_path)
+    temp_dir = tempfile.mkdtemp(prefix="mrgrimpdf_pptx_")
     zoom = dpi / 72.0
     mat = fitz.Matrix(zoom, zoom)
     
-    for i, page in enumerate(doc):
-        pix = page.get_pixmap(matrix=mat, alpha=False)
-        img_temp = os.path.join(temp_dir, f"_temp_slide_{i}.png")
-        pix.save(img_temp)
-        
-        slide = prs.slides.add_slide(blank_slide_layout)
-        slide.shapes.add_picture(img_temp, 0, 0, width=prs.slide_width, height=prs.slide_height)
-        
-        if os.path.exists(img_temp):
-            os.remove(img_temp)
-            
-    doc.close()
-    prs.save(output_path)
+    try:
+        for i, page in enumerate(doc):
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            img_temp = os.path.join(temp_dir, f"slide_{i}.png")
+            pix.save(img_temp)
+            slide = prs.slides.add_slide(blank_slide_layout)
+            # Preserve the original page ratio instead of distorting every page
+            # to 4:3.
+            scale = min(prs.slide_width / pix.width, prs.slide_height / pix.height)
+            width, height = int(pix.width * scale), int(pix.height * scale)
+            slide.shapes.add_picture(img_temp, int((prs.slide_width - width) / 2), int((prs.slide_height - height) / 2), width=width, height=height)
+        if not len(doc):
+            raise ValueError("The PDF has no pages to convert.")
+        prs.save(output_path)
+    finally:
+        doc.close()
+        shutil.rmtree(temp_dir, ignore_errors=True)
     return output_path
 
 def pdf_to_pdfa(file_path, output_path):
-    doc = fitz.open(file_path)
-    meta = doc.metadata
-    meta['producer'] = 'MrGrimPDF'
-    meta['format'] = 'PDF/A-1b'
-    doc.set_metadata(meta)
-    doc.save(output_path, garbage=4, deflate=True, clean=True)
-    doc.close()
+    """Create a real PDF/A file through Ghostscript when available.
+
+    Merely adding a metadata label does not make a document PDF/A compliant, so
+    this deliberately fails with a clear message if the archival engine is not
+    installed on the host.
+    """
+    executable = next((shutil.which(name) for name in ('gs', 'gswin64c', 'gswin32c') if shutil.which(name)), None)
+    if not executable:
+        raise RuntimeError("PDF/A conversion requires Ghostscript. Install Ghostscript or use the Docker deployment.")
+    command = [
+        executable, '-dPDFA=2', '-dBATCH', '-dNOPAUSE', '-dSAFER',
+        '-sDEVICE=pdfwrite', '-dPDFACompatibilityPolicy=1',
+        '-sColorConversionStrategy=UseDeviceIndependentColor', '-sProcessColorModel=DeviceRGB',
+        f'-sOutputFile={output_path}', 'PDFA_def.ps', file_path,
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=180)
+    if result.returncode != 0 or not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+        raise RuntimeError(f"PDF/A conversion failed: {(result.stderr or result.stdout).strip()[-500:]}")
     return output_path

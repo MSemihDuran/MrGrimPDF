@@ -13,7 +13,10 @@ const state = {
     canvasMode: 'pen',
     canvasColor: '#E11D48',
     isDrawing: false,
-    redactTerms: []
+    redactTerms: [],
+    canvasHasInk: false,
+    canvasStart: null,
+    canvasPoint: null
 };
 
 const TOOLS = {
@@ -38,7 +41,8 @@ const TOOLS = {
     'pdf-to-excel': { title: 'PDF to Excel', subtitle: 'Extract tables and data into an Excel spreadsheet (.xlsx)', icon: 'fa-file-excel', accept: '.pdf', multiple: false },
     'pdf-to-pptx': { title: 'PDF to PowerPoint', subtitle: 'Convert PDF pages into PowerPoint (.pptx) slides', icon: 'fa-file-powerpoint', accept: '.pdf', multiple: false },
     'compare': { title: 'Compare PDFs', subtitle: 'Highlight visual differences between two revisions', icon: 'fa-code-compare', accept: '.pdf', multiple: true },
-    'crop': { title: 'Crop PDF', subtitle: 'Crop page margins by percentages', icon: 'fa-crop-simple', accept: '.pdf', multiple: false }
+    'crop': { title: 'Crop PDF', subtitle: 'Crop page margins by percentages', icon: 'fa-crop-simple', accept: '.pdf', multiple: false },
+    'pdf-to-pdfa': { title: 'PDF to PDF/A', subtitle: 'Create an archival PDF/A-2b document', icon: 'fa-box-archive', accept: '.pdf', multiple: false }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,7 +100,8 @@ function filterTools(category) {
 
     const cards = document.querySelectorAll('.glass-tool-card');
     cards.forEach(card => {
-        if (category === 'all' || card.getAttribute('data-category') === category) {
+        const categories = (card.getAttribute('data-category') || '').split(/\s+/);
+        if (category === 'all' || categories.includes(category)) {
             card.style.display = 'flex';
         } else {
             card.style.display = 'none';
@@ -169,6 +174,8 @@ function resetStudioWorkspace() {
     document.getElementById('btnProcessAction').style.display = 'block';
     document.getElementById('processProgressBar').style.display = 'none';
     document.getElementById('thumbnailsGrid').innerHTML = '';
+    state.redactTerms = [];
+    clearCanvas();
 }
 
 function resetStudioForNewTask() {
@@ -454,8 +461,16 @@ function renderDynamicToolOptions(toolKey) {
         case 'watermark':
             container.innerHTML = `
                 <div class="config-group">
-                    <label class="config-label">Watermark Text</label>
+                    <label class="config-label">Watermark Type</label>
+                    <select id="wmTypeSelect" class="config-select" onchange="toggleWatermarkInputs(this.value)">
+                        <option value="text">Text watermark</option>
+                        <option value="image">Image / logo watermark</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label class="config-label" id="wmValueLabel">Watermark Text</label>
                     <input type="text" id="wmTextInput" class="config-input" value="CONFIDENTIAL" placeholder="Enter text...">
+                    <input type="file" id="wmImageInput" accept="image/*" class="config-input" style="display:none;">
                 </div>
                 <div class="config-group">
                     <label class="config-label">Position on Page</label>
@@ -475,6 +490,11 @@ function renderDynamicToolOptions(toolKey) {
                     <label class="config-label">Rotation Angle (°)</label>
                     <input type="range" id="wmRotationInput" min="0" max="360" value="45" class="config-input" oninput="document.getElementById('wmRotVal').textContent = this.value + '°'">
                     <span id="wmRotVal" class="text-xs text-muted">45°</span>
+                </div>
+                <div class="config-group">
+                    <label class="config-label">Opacity</label>
+                    <input type="range" id="wmOpacityInput" min="5" max="100" value="35" class="config-input" oninput="document.getElementById('wmOpacityVal').textContent = this.value + '%'">
+                    <span id="wmOpacityVal" class="text-xs text-muted">35%</span>
                 </div>
                 <div class="config-group">
                     <label class="config-label">Color & Font Size</label>
@@ -562,7 +582,46 @@ function renderDynamicToolOptions(toolKey) {
                     <label class="config-label">Custom Page Ranges</label>
                     <input type="text" id="splitRangeInput" class="config-input" placeholder="Example: 1-2, 3-5">
                 </div>
+                <div class="config-group" id="splitExtractGroup" style="display:none;">
+                    <label class="config-label">Pages to Extract</label>
+                    <input type="text" id="splitExtractInput" class="config-input" placeholder="Example: 1, 3, 5">
+                </div>
             `;
+            break;
+
+        case 'pdf-to-images':
+            container.innerHTML = `
+                <div class="config-group">
+                    <label class="config-label">Output format</label>
+                    <select id="imageFormatSelect" class="config-select"><option value="jpg">JPG</option><option value="png">PNG</option></select>
+                </div>
+                <div class="config-group">
+                    <label class="config-label">Resolution (DPI)</label>
+                    <select id="imageDpiSelect" class="config-select"><option value="150">150 DPI - balanced</option><option value="300">300 DPI - high quality</option><option value="600">600 DPI - print</option></select>
+                </div>`;
+            break;
+
+        case 'crop':
+            container.innerHTML = `
+                <div class="config-group">
+                    <label class="config-label">Crop margins (%)</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <input id="cropTopInput" type="number" class="config-input" min="0" max="99" value="0" placeholder="Top">
+                        <input id="cropBottomInput" type="number" class="config-input" min="0" max="99" value="0" placeholder="Bottom">
+                        <input id="cropLeftInput" type="number" class="config-input" min="0" max="99" value="0" placeholder="Left">
+                        <input id="cropRightInput" type="number" class="config-input" min="0" max="99" value="0" placeholder="Right">
+                    </div>
+                </div>`;
+            break;
+
+        case 'edit':
+            container.innerHTML = `
+                <div class="config-group"><label class="config-label">Apply drawing to page</label><input id="canvasPageInput" type="number" class="config-input" min="1" value="1"></div>
+                <p style="font-size:.82rem;color:#64748b;">Draw on the canvas, then save the transparent overlay to the selected PDF page.</p>`;
+            break;
+
+        case 'pdf-to-pdfa':
+            container.innerHTML = `<div class="config-group"><p style="font-size:.88rem;color:#64748b;">Creates a PDF/A-2b archival document for long-term storage.</p></div>`;
             break;
 
         case 'redact':
@@ -625,6 +684,14 @@ function selectPnPos(pos, elem) {
 
 function toggleSplitInputs(mode) {
     document.getElementById('splitRangeGroup').style.display = mode === 'ranges' ? 'block' : 'none';
+    document.getElementById('splitExtractGroup').style.display = mode === 'extract' ? 'block' : 'none';
+}
+
+function toggleWatermarkInputs(type) {
+    const isImage = type === 'image';
+    document.getElementById('wmTextInput').style.display = isImage ? 'none' : 'block';
+    document.getElementById('wmImageInput').style.display = isImage ? 'block' : 'none';
+    document.getElementById('wmValueLabel').textContent = isImage ? 'Watermark Image' : 'Watermark Text';
 }
 
 function addRedactTerm() {
@@ -686,25 +753,53 @@ function initCanvas() {
     };
 
     const startDraw = (e) => {
+        if (e.cancelable) e.preventDefault();
         state.isDrawing = true;
-        ctx.beginPath();
         const pos = getPos(e);
-        ctx.moveTo(pos.x, pos.y);
+        state.canvasStart = pos;
+        state.canvasPoint = pos;
+        if (state.canvasMode === 'pen') {
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
     };
 
     const draw = (e) => {
         if (!state.isDrawing) return;
         if (e.cancelable) e.preventDefault();
         const pos = getPos(e);
-        ctx.strokeStyle = state.canvasColor;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+        state.canvasPoint = pos;
+        if (state.canvasMode === 'pen') {
+            ctx.strokeStyle = state.canvasColor;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            state.canvasHasInk = true;
+        }
     };
 
     const stopDraw = () => {
+        if (!state.isDrawing) return;
+        if (state.canvasMode === 'rect' && state.canvasStart && state.canvasPoint) {
+            const start = state.canvasStart;
+            const end = state.canvasPoint;
+            ctx.strokeStyle = state.canvasColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
+            state.canvasHasInk = true;
+        } else if (state.canvasMode === 'text' && state.canvasStart) {
+            const value = window.prompt('Text to add to the PDF:');
+            if (value && value.trim()) {
+                ctx.fillStyle = state.canvasColor;
+                ctx.font = '20px sans-serif';
+                ctx.fillText(value.trim(), state.canvasStart.x, state.canvasStart.y);
+                state.canvasHasInk = true;
+            }
+        }
         state.isDrawing = false;
+        state.canvasStart = null;
+        state.canvasPoint = null;
     };
 
     canvas.addEventListener('mousedown', startDraw);
@@ -737,8 +832,10 @@ function setCanvasMode(mode) {
 
 function clearCanvas() {
     const canvas = document.getElementById('drawingCanvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    state.canvasHasInk = false;
 }
 
 state.docOrientation = 'portrait';
@@ -1229,16 +1326,39 @@ async function executeCurrentTool() {
         formData.append('mode', mode);
         if (mode === 'ranges') {
             formData.append('ranges', document.getElementById('splitRangeInput').value);
+        } else if (mode === 'extract') {
+            const values = document.getElementById('splitExtractInput').value
+                .split(',').map(v => Number.parseInt(v.trim(), 10)).filter(Number.isInteger);
+            if (!values.length) {
+                alert('Lütfen çıkarılacak en az bir sayfa girin.');
+                document.getElementById('btnProcessAction').style.display = 'block';
+                document.getElementById('processProgressBar').style.display = 'none';
+                return;
+            }
+            formData.append('extract_pages', JSON.stringify(values));
         }
     } else if (action === 'compress') {
         formData.append('level', state.compressLevel);
     } else if (action === 'watermark') {
-        formData.append('wm_type', 'text');
-        formData.append('text', document.getElementById('wmTextInput').value);
+        const type = document.getElementById('wmTypeSelect').value;
+        formData.append('wm_type', type);
+        if (type === 'image') {
+            const image = document.getElementById('wmImageInput').files[0];
+            if (!image) {
+                alert('Lütfen filigran olarak kullanılacak resmi seçin.');
+                document.getElementById('btnProcessAction').style.display = 'block';
+                document.getElementById('processProgressBar').style.display = 'none';
+                return;
+            }
+            formData.append('image', image);
+        } else {
+            formData.append('text', document.getElementById('wmTextInput').value);
+        }
         formData.append('position', state.watermarkPos);
         formData.append('rotation', document.getElementById('wmRotationInput').value);
         formData.append('color', document.getElementById('wmColorInput').value);
         formData.append('font_size', document.getElementById('wmFontSizeInput').value);
+        formData.append('opacity', Number(document.getElementById('wmOpacityInput').value) / 100);
     } else if (action === 'page-numbers') {
         formData.append('format', document.getElementById('pnFormatSelect').value);
         formData.append('position', state.pageNumberPos);
@@ -1262,17 +1382,49 @@ async function executeCurrentTool() {
             if (p.rotation) rotMap[p.pageNumber] = p.rotation;
         });
         formData.append('rotations', JSON.stringify(rotMap));
+        formData.append('remove_pages', JSON.stringify(state.activePages.filter(p => p.isDeleted).map(p => p.pageNumber)));
     } else if (action === 'organize') {
         const activeRemaining = state.activePages.filter(p => !p.isDeleted).map(p => p.pageNumber);
         formData.append('order', JSON.stringify(activeRemaining));
     } else if (action === 'sign') {
         const canvas = document.getElementById('drawingCanvas');
+        if (!state.canvasHasInk) {
+            alert('İmzayı çizmeden işlem yapılamaz.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
+            return;
+        }
         formData.append('signature_data', canvas.toDataURL());
         formData.append('page', 1);
+    } else if (action === 'edit') {
+        if (!state.canvasHasInk) {
+            alert('Önce kalem, kutu veya metin aracıyla bir düzenleme ekleyin.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
+            return;
+        }
+        const canvas = document.getElementById('drawingCanvas');
+        const page = Number.parseInt(document.getElementById('canvasPageInput').value, 10) || 1;
+        const annotationBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!annotationBlob) {
+            alert('Düzenleme görüntüsü oluşturulamadı.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
+            return;
+        }
+        formData.append('annotation_image', annotationBlob, 'annotation.png');
+        formData.append('page', String(page));
     } else if (action === 'redact') {
         formData.append('terms', JSON.stringify(state.redactTerms));
     } else if (action === 'ocr') {
         formData.append('lang', document.getElementById('ocrLangSelect').value);
+    } else if (action === 'pdf-to-images') {
+        formData.append('format', document.getElementById('imageFormatSelect').value);
+        formData.append('dpi', document.getElementById('imageDpiSelect').value);
+    } else if (action === 'crop') {
+        ['top', 'bottom', 'left', 'right'].forEach(side => {
+            formData.append(side, document.getElementById(`crop${side[0].toUpperCase()}${side.slice(1)}Input`).value);
+        });
     }
 
     try {

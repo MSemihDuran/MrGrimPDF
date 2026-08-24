@@ -1,4 +1,5 @@
 import os
+import io
 import fitz
 from PIL import Image, ImageChops
 
@@ -95,8 +96,38 @@ def compare_pdfs(file1_path, file2_path, output_path):
         w2 = pix2.width if pix2 else 600
         h2 = pix2.height if pix2 else 800
         
-        total_w = w1 + w2 + 60
-        max_h = max(h1, h2) + 80
+        diff_w, diff_h = max(w1, w2), max(h1, h2)
+        diff_bytes = None
+        changed = True
+        if pix1 and pix2:
+            # A red heat map makes actual pixel changes immediately visible,
+            # unlike a plain side-by-side comparison.
+            image_a = Image.frombytes("RGB", (pix1.width, pix1.height), pix1.samples)
+            image_b = Image.frombytes("RGB", (pix2.width, pix2.height), pix2.samples)
+            if image_a.size != (diff_w, diff_h):
+                padded = Image.new("RGB", (diff_w, diff_h), "white")
+                padded.paste(image_a, (0, 0))
+                image_a = padded
+            if image_b.size != (diff_w, diff_h):
+                padded = Image.new("RGB", (diff_w, diff_h), "white")
+                padded.paste(image_b, (0, 0))
+                image_b = padded
+            difference = ImageChops.difference(image_a, image_b)
+            changed = difference.getbbox() is not None
+            # Keep unchanged content pale and express differences in red.
+            background = image_a.convert("RGBA")
+            background.putalpha(70)
+            heat = Image.new("RGBA", (diff_w, diff_h), (230, 38, 38, 0))
+            heat.putalpha(difference.convert("L").point(lambda value: min(255, value * 4)))
+            comparison = Image.new("RGBA", (diff_w, diff_h), "white")
+            comparison.alpha_composite(background)
+            comparison.alpha_composite(heat)
+            buffer = io.BytesIO()
+            comparison.convert("RGB").save(buffer, format="PNG", optimize=True)
+            diff_bytes = buffer.getvalue()
+
+        total_w = w1 + w2 + diff_w + 80
+        max_h = max(h1, h2, diff_h) + 105
         
         page = report_doc.new_page(width=total_w, height=max_h)
         
@@ -106,13 +137,22 @@ def compare_pdfs(file1_path, file2_path, output_path):
         shape.finish(color=None, fill=(0.1, 0.12, 0.18))
         shape.commit()
         
-        page.insert_text(fitz.Point(30, 26), f"MrGrimPDF Comparison - Page {i+1}", fontsize=14, color=(1, 1, 1))
-        page.insert_text(fitz.Point(total_w / 2 + 30, 26), "Document B (Modified / New)", fontsize=12, color=(0.8, 0.9, 1))
+        page.insert_text(fitz.Point(20, 27), f"MrGrimPDF Comparison - Page {i+1}", fontsize=14, color=(1, 1, 1))
+        page.insert_text(fitz.Point(20, 66), "Document A", fontsize=11, color=(0.15, 0.18, 0.25))
+        page.insert_text(fitz.Point(w1 + 40, 66), "Document B", fontsize=11, color=(0.15, 0.18, 0.25))
+        page.insert_text(fitz.Point(w1 + w2 + 60, 66), "Differences (red)", fontsize=11, color=(0.75, 0.1, 0.1))
         
         if pix1:
-            page.insert_image(fitz.Rect(20, 50, 20 + w1, 50 + h1), pixmap=pix1)
+            page.insert_image(fitz.Rect(20, 75, 20 + w1, 75 + h1), pixmap=pix1)
         if pix2:
-            page.insert_image(fitz.Rect(w1 + 40, 50, w1 + 40 + w2, 50 + h2), pixmap=pix2)
+            page.insert_image(fitz.Rect(w1 + 40, 75, w1 + 40 + w2, 75 + h2), pixmap=pix2)
+        diff_rect = fitz.Rect(w1 + w2 + 60, 75, w1 + w2 + 60 + diff_w, 75 + diff_h)
+        if diff_bytes:
+            page.insert_image(diff_rect, stream=diff_bytes)
+            page.insert_text(fitz.Point(w1 + w2 + 60, max_h - 12), "Changes detected" if changed else "No visual changes", fontsize=9, color=(0.5, 0.05, 0.05) if changed else (0.1, 0.45, 0.2))
+        else:
+            page.draw_rect(diff_rect, color=(0.8, 0.1, 0.1), fill=(1, 0.94, 0.94))
+            page.insert_text(fitz.Point(diff_rect.x0 + 12, diff_rect.y0 + 25), "Page exists in only one document", fontsize=11, color=(0.7, 0.05, 0.05))
             
     doc1.close()
     doc2.close()
