@@ -4,17 +4,20 @@ import io
 from PIL import Image
 
 def compress_pdf(file_path, output_path, level='recommended'):
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(out_dir, exist_ok=True)
+    
     doc = fitz.open(file_path)
     
     if level == 'extreme':
-        img_quality = 50
-        max_dim = 1000
+        img_quality = 45
+        max_dim = 900
     elif level == 'low':
         img_quality = 85
-        max_dim = 2400
+        max_dim = 2200
     else:
-        img_quality = 70
-        max_dim = 1600
+        img_quality = 65
+        max_dim = 1400
 
     for page in doc:
         img_list = page.get_images(full=True)
@@ -52,6 +55,12 @@ def compress_pdf(file_path, output_path, level='recommended'):
             except Exception:
                 continue
 
+    if os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except Exception:
+            pass
+
     doc.save(
         output_path,
         garbage=4,
@@ -60,9 +69,9 @@ def compress_pdf(file_path, output_path, level='recommended'):
     )
     doc.close()
     
-    orig_size = os.path.getsize(file_path)
-    new_size = os.path.getsize(output_path)
-    saved_pct = round(((orig_size - new_size) / orig_size) * 100, 1) if orig_size > 0 else 0
+    orig_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+    new_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
+    saved_pct = max(0, round(((orig_size - new_size) / orig_size) * 100, 1)) if orig_size > 0 else 0
     
     return {
         "output_path": output_path,
@@ -72,21 +81,25 @@ def compress_pdf(file_path, output_path, level='recommended'):
     }
 
 def repair_pdf(file_path, output_path):
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(out_dir, exist_ok=True)
     doc = fitz.open(file_path)
     doc.save(output_path, garbage=4, clean=True, deflate=True)
     doc.close()
     return output_path
 
 def ocr_pdf(file_path, output_path, lang='tur+eng'):
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(out_dir, exist_ok=True)
     doc = fitz.open(file_path)
     ocr_doc = fitz.open()
 
     for i, page in enumerate(doc):
-        pix = page.get_pixmap(dpi=200)
+        pix = page.get_pixmap(dpi=150)
         img_bytes = pix.tobytes("png")
         
         try:
-            page_ocr_pdf = fitz.open("pdf", page.get_pdf_ocr(language=lang, dpi=200))
+            page_ocr_pdf = fitz.open("pdf", page.get_pdf_ocr(language=lang, dpi=150))
             ocr_doc.insert_pdf(page_ocr_pdf)
             page_ocr_pdf.close()
         except Exception:

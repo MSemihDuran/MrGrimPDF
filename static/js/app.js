@@ -152,10 +152,13 @@ function closeStudio() {
     document.getElementById('studioModal').classList.remove('active');
     state.currentTool = null;
     state.uploadedFiles = [];
+    state.rawFiles = [];
     state.activePages = [];
 }
 
 function resetStudioWorkspace() {
+    state.rawFiles = [];
+    state.uploadedFiles = [];
     document.getElementById('stageDropHint').style.display = 'block';
     document.getElementById('stagePreviewContainer').style.display = 'none';
     document.getElementById('stageCanvasContainer').style.display = 'none';
@@ -176,6 +179,8 @@ function resetStudioForNewTask() {
 async function handleFileUpload(fileList, targetTool) {
     if (!targetTool) targetTool = 'merge';
     if (!state.currentTool) openTool(targetTool);
+
+    state.rawFiles = Array.from(fileList);
 
     const formData = new FormData();
     for (let i = 0; i < fileList.length; i++) {
@@ -1189,19 +1194,33 @@ async function executeCurrentTool() {
         formData.append('custom_name', defaultFilename);
 
     } else {
-        if (state.uploadedFiles.length === 0) {
+        if (state.uploadedFiles.length === 0 && (!state.rawFiles || state.rawFiles.length === 0)) {
             alert('Lütfen önce bir dosya seçin.');
             document.getElementById('btnProcessAction').style.display = 'block';
             document.getElementById('processProgressBar').style.display = 'none';
             return;
         }
 
-        const primaryFile = state.uploadedFiles[0];
-        if (action === 'merge' || action === 'images-to-pdf') {
-            const fileIds = state.uploadedFiles.map(f => f.file_id);
-            formData.append('file_ids', JSON.stringify(fileIds));
-        } else {
-            formData.append('file_id', primaryFile.file_id);
+        // Attach actual raw files for 100% serverless safety
+        if (state.rawFiles && state.rawFiles.length > 0) {
+            if (action === 'merge' || action === 'images-to-pdf') {
+                state.rawFiles.forEach(f => formData.append('files', f));
+            } else if (action === 'compare') {
+                formData.append('file_1', state.rawFiles[0]);
+                if (state.rawFiles[1]) formData.append('file_2', state.rawFiles[1]);
+            } else {
+                formData.append('file', state.rawFiles[0]);
+            }
+        }
+
+        if (state.uploadedFiles && state.uploadedFiles.length > 0) {
+            const primaryFile = state.uploadedFiles[0];
+            if (action === 'merge' || action === 'images-to-pdf') {
+                const fileIds = state.uploadedFiles.map(f => f.file_id);
+                formData.append('file_ids', JSON.stringify(fileIds));
+            } else {
+                formData.append('file_id', primaryFile.file_id);
+            }
         }
     }
 

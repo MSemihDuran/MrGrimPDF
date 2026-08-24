@@ -154,6 +154,48 @@ def render_preview(file_id, page_num):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def get_primary_file(request, data, out_id, key='file'):
+    if key in request.files and request.files[key].filename:
+        f = request.files[key]
+        safe_name = f"proc_{out_id}_{secure_filename(f.filename)}"
+        p = os.path.join(UPLOAD_FOLDER, safe_name)
+        f.save(p)
+        return p
+    if 'files' in request.files:
+        flist = request.files.getlist('files')
+        if flist and flist[0].filename:
+            f = flist[0]
+            safe_name = f"proc_{out_id}_{secure_filename(f.filename)}"
+            p = os.path.join(UPLOAD_FOLDER, safe_name)
+            f.save(p)
+            return p
+    fid = data.get(key) or data.get('file_id')
+    if fid:
+        p = os.path.join(UPLOAD_FOLDER, secure_filename(fid))
+        if os.path.exists(p):
+            return p
+    return None
+
+def get_multi_files(request, data, out_id, key='files'):
+    paths = []
+    if key in request.files:
+        for idx, f in enumerate(request.files.getlist(key)):
+            if f and f.filename:
+                safe_name = f"multi_{out_id}_{idx}_{secure_filename(f.filename)}"
+                p = os.path.join(UPLOAD_FOLDER, safe_name)
+                f.save(p)
+                paths.append(p)
+    if not paths and data.get('file_ids'):
+        try:
+            fids = json.loads(data.get('file_ids', '[]'))
+            for fid in fids:
+                p = os.path.join(UPLOAD_FOLDER, secure_filename(fid))
+                if os.path.exists(p):
+                    paths.append(p)
+        except Exception:
+            pass
+    return paths
+
 @app.route('/api/process/<action>', methods=['POST'])
 def process_action(action):
     data = request.form.to_dict() if request.form else (request.get_json() or {})
@@ -162,15 +204,17 @@ def process_action(action):
 
     try:
         if action == 'merge':
-            file_ids = json.loads(data.get('file_ids', '[]'))
-            file_paths = [os.path.join(UPLOAD_FOLDER, secure_filename(fid)) for fid in file_ids]
+            file_paths = get_multi_files(request, data, out_id)
+            if not file_paths:
+                return jsonify({"error": "Lütfen birleştirilecek PDF dosyalarını seçin."}), 400
             out_filename = f"MrGrimPDF_Merged_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             merge_pdfs(file_paths, out_path)
 
         elif action == 'split':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             mode = data.get('mode', 'all')
             ranges = data.get('ranges', '')
             extract_pages = json.loads(data.get('extract_pages', '[]'))
@@ -178,24 +222,27 @@ def process_action(action):
             out_filename = os.path.basename(out_path)
 
         elif action == 'remove-pages':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             pages = json.loads(data.get('pages', '[]'))
             out_filename = f"MrGrimPDF_Removed_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             remove_pages(file_path, out_path, pages)
 
         elif action == 'organize':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             order = json.loads(data.get('order', '[]'))
             out_filename = f"MrGrimPDF_Organized_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             reorder_pages(file_path, out_path, order)
 
         elif action == 'rotate':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             rot_map = json.loads(data.get('rotations', '{}'))
             global_angle = int(data.get('global_angle', 0))
             out_filename = f"MrGrimPDF_Rotated_{out_id}.pdf"
@@ -203,8 +250,9 @@ def process_action(action):
             rotate_pages(file_path, out_path, rot_map, global_angle)
 
         elif action == 'crop':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             left = float(data.get('left', 0))
             top = float(data.get('top', 0))
             right = float(data.get('right', 0))
@@ -214,51 +262,58 @@ def process_action(action):
             crop_pdf(file_path, out_path, left, top, right, bottom)
 
         elif action == 'pdf-to-word':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             out_filename = f"MrGrimPDF_Converted_{out_id}.docx"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             pdf_to_word(file_path, out_path)
 
         elif action == 'pdf-to-images':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             fmt = data.get('format', 'jpg')
             dpi = int(data.get('dpi', 150))
             out_path = pdf_to_images(file_path, OUTPUT_FOLDER, img_format=fmt, dpi=dpi)
             out_filename = os.path.basename(out_path)
 
         elif action == 'images-to-pdf':
-            file_ids = json.loads(data.get('file_ids', '[]'))
-            file_paths = [os.path.join(UPLOAD_FOLDER, secure_filename(fid)) for fid in file_ids]
+            file_paths = get_multi_files(request, data, out_id)
+            if not file_paths:
+                return jsonify({"error": "Lütfen eklenecek resimleri seçin."}), 400
             out_filename = f"MrGrimPDF_Images_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             images_to_pdf(file_paths, out_path)
 
         elif action == 'pdf-to-excel':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             out_filename = f"MrGrimPDF_Tables_{out_id}.xlsx"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             pdf_to_excel(file_path, out_path)
 
         elif action == 'pdf-to-pptx':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             out_filename = f"MrGrimPDF_Slides_{out_id}.pptx"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             pdf_to_pptx(file_path, out_path)
 
         elif action == 'pdf-to-pdfa':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             out_filename = f"MrGrimPDF_Archival_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             pdf_to_pdfa(file_path, out_path)
 
         elif action == 'compress':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             level = data.get('level', 'recommended')
             out_filename = f"MrGrimPDF_Compressed_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
@@ -275,23 +330,26 @@ def process_action(action):
             })
 
         elif action == 'repair':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             out_filename = f"MrGrimPDF_Repaired_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             repair_pdf(file_path, out_path)
 
         elif action == 'ocr':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             lang = data.get('lang', 'tur+eng')
             out_filename = f"MrGrimPDF_OCR_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             ocr_pdf(file_path, out_path, lang=lang)
 
         elif action == 'watermark':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             wm_type = data.get('wm_type', 'text')
             wm_text = data.get('text', 'CONFIDENTIAL')
             opacity = float(data.get('opacity', 0.35))
@@ -314,8 +372,9 @@ def process_action(action):
                           position=position, font_size=font_size, color=color)
 
         elif action == 'page-numbers':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             fmt = data.get('format', '{page} / {total}')
             pos = data.get('position', 'bottom-center')
             fsize = int(data.get('font_size', 11))
@@ -327,19 +386,21 @@ def process_action(action):
                              font_size=fsize, start_num=start_num, color=color)
 
         elif action == 'edit':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             annots = json.loads(data.get('annotations', '[]'))
             out_filename = f"MrGrimPDF_Edited_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             apply_annotations(file_path, out_path, annots)
 
         elif action == 'protect':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             pw = data.get('password', '')
             if not pw:
-                return jsonify({"error": "Password cannot be empty"}), 400
+                return jsonify({"error": "Lütfen bir şifre girin"}), 400
             allow_print = data.get('allow_print', 'true').lower() == 'true'
             allow_copy = data.get('allow_copy', 'true').lower() == 'true'
             out_filename = f"MrGrimPDF_Protected_{out_id}.pdf"
@@ -347,16 +408,18 @@ def process_action(action):
             protect_pdf(file_path, out_path, user_password=pw, allow_print=allow_print, allow_copy=allow_copy)
 
         elif action == 'unlock':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             pw = data.get('password', '')
             out_filename = f"MrGrimPDF_Unlocked_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             unlock_pdf(file_path, out_path, password=pw)
 
         elif action == 'sign':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             sig_file_path = None
             if 'signature' in files:
                 sig = files['signature']
@@ -379,8 +442,9 @@ def process_action(action):
             sign_pdf(file_path, out_path, sig_file_path, page_num=page_num, x=x, y=y)
 
         elif action == 'redact':
-            file_id = data.get('file_id')
-            file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_id))
+            file_path = get_primary_file(request, data, out_id)
+            if not file_path:
+                return jsonify({"error": "Lütfen bir PDF dosyası seçin."}), 400
             search_terms = json.loads(data.get('terms', '[]'))
             rects = json.loads(data.get('rectangles', '[]'))
             out_filename = f"MrGrimPDF_Redacted_{out_id}.pdf"
@@ -388,10 +452,10 @@ def process_action(action):
             redact_pdf(file_path, out_path, search_terms=search_terms, custom_rects=rects)
 
         elif action == 'compare':
-            fid1 = data.get('file_id_1')
-            fid2 = data.get('file_id_2')
-            fpath1 = os.path.join(UPLOAD_FOLDER, secure_filename(fid1))
-            fpath2 = os.path.join(UPLOAD_FOLDER, secure_filename(fid2))
+            fpath1 = get_primary_file(request, data, out_id, 'file_1') or get_primary_file(request, data, out_id, 'file_id_1')
+            fpath2 = get_primary_file(request, data, out_id, 'file_2') or get_primary_file(request, data, out_id, 'file_id_2')
+            if not fpath1 or not fpath2:
+                return jsonify({"error": "Lütfen karşılaştırılacak iki PDF dosyasını seçin."}), 400
             out_filename = f"MrGrimPDF_Comparison_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             compare_pdfs(fpath1, fpath2, out_path)
