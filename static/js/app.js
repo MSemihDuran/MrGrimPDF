@@ -893,33 +893,50 @@ function toggleCustomMarginInputs(val) {
     }
 }
 
-function convertImageToPngBytes(src) {
-    return new Promise((resolve, reject) => {
+async function getImageForPdf(item, pdfDoc) {
+    return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            canvas.toBlob(async blob => {
-                if (blob) {
-                    const buf = await blob.arrayBuffer();
-                    resolve(buf);
-                } else {
-                    reject(new Error('Canvas toBlob failed'));
-                }
-            }, 'image/png');
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob(async blob => {
+                    if (!blob) {
+                        resolve(null);
+                        return;
+                    }
+                    try {
+                        const buf = await blob.arrayBuffer();
+                        const embedded = await pdfDoc.embedJpg(buf);
+                        resolve({ embedded, width: canvas.width, height: canvas.height });
+                    } catch (err) {
+                        console.error('embedJpg error:', err);
+                        resolve(null);
+                    }
+                }, 'image/jpeg', 0.95);
+            } catch (err) {
+                console.error('Canvas processing error:', err);
+                resolve(null);
+            }
         };
-        img.onerror = () => reject(new Error('Image failed to load'));
-        img.src = src;
+        img.onerror = () => {
+            console.error('Image element failed to load:', item.name);
+            resolve(null);
+        };
+        img.src = item.dataUrl || (item.file ? URL.createObjectURL(item.file) : '');
     });
 }
 
 async function generatePdfWithPdfLib(options) {
     if (!window.PDFLib) throw new Error('PDFLib not available');
-    const { PDFDocument, rgb } = window.PDFLib;
+    const { PDFDocument } = window.PDFLib;
     const pdfDoc = await PDFDocument.create();
 
     const ptPerMm = 72 / 25.4;
@@ -980,43 +997,15 @@ async function generatePdfWithPdfLib(options) {
     // Embed gallery images
     if (options.images && options.images.length > 0 && !options.content) {
         for (const item of options.images) {
-            let embeddedImg = null;
-            let imgBytes = null;
+            const imgData = await getImageForPdf(item, pdfDoc);
+            if (!imgData) continue;
 
-            if (item.file) {
-                imgBytes = await item.file.arrayBuffer();
-            } else if (item.dataUrl) {
-                const res = await fetch(item.dataUrl);
-                imgBytes = await res.arrayBuffer();
-            }
-
-            if (imgBytes) {
-                const isPng = (item.file && item.file.type === 'image/png') || (item.name && item.name.toLowerCase().endsWith('.png'));
-                try {
-                    if (isPng) {
-                        embeddedImg = await pdfDoc.embedPng(imgBytes);
-                    } else {
-                        embeddedImg = await pdfDoc.embedJpg(imgBytes);
-                    }
-                } catch (embedErr) {
-                    try {
-                        const fallbackBytes = await convertImageToPngBytes(item.dataUrl || URL.createObjectURL(item.file));
-                        embeddedImg = await pdfDoc.embedPng(fallbackBytes);
-                    } catch (e) {
-                        console.error('Failed to embed image:', item.name, e);
-                        continue;
-                    }
-                }
-            }
-
-            if (!embeddedImg) continue;
-
-            const imgW = embeddedImg.width;
-            const imgH = embeddedImg.height;
+            const imgW = imgData.width;
+            const imgH = imgData.height;
 
             if (pageKey === 'fit') {
                 const page = pdfDoc.addPage([imgW, imgH]);
-                page.drawImage(embeddedImg, {
+                page.drawImage(imgData.embedded, {
                     x: 0,
                     y: 0,
                     width: imgW,
@@ -1034,7 +1023,7 @@ async function generatePdfWithPdfLib(options) {
                 const drawX = margin + (availW - drawW) / 2;
                 const drawY = margin + (availH - drawH) / 2;
 
-                page.drawImage(embeddedImg, {
+                page.drawImage(imgData.embedded, {
                     x: drawX,
                     y: drawY,
                     width: drawW,
@@ -1090,7 +1079,7 @@ async function executeCurrentTool() {
         const defaultFilename = `MrGrimPDF_${dateStr}.pdf`;
 
         // 1. High-Performance Client-Side Generation (0 network lag, 0 file-size limit!)
-        if (window.PDFLib && (state.createImages.length > 0 || (!content && !title))) {
+        if (state.createImages.length > 0 || (!content && !title)) {
             try {
                 const pdfBlob = await generatePdfWithPdfLib({
                     title, content, pageSize, orientation, marginType,
@@ -1105,7 +1094,11 @@ async function executeCurrentTool() {
                 });
                 return;
             } catch (libErr) {
-                console.warn('Client PDFLib generation fallback:', libErr);
+                console.error('Client PDF generation error:', libErr);
+                alert('PDF oluşturulamadı: ' + (libErr.message || 'Hata oluştu'));
+                document.getElementById('btnProcessAction').style.display = 'block';
+                document.getElementById('processProgressBar').style.display = 'none';
+                return;
             }
         }
 

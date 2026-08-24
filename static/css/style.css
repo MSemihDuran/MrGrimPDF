@@ -587,11 +587,23 @@ body {
 
 .create-images-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 14px;
-    padding: 10px 4px;
-    max-height: 380px;
+    padding: 10px 6px 30px 6px;
+    max-height: 480px;
     overflow-y: auto;
+    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.create-images-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.create-images-grid::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
 }
 
 .create-image-card {
@@ -604,6 +616,9 @@ body {
     cursor: grab !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     user-select: none;
+    min-height: 148px;
+    display: flex;
+    flex-direction: column;
 }
 
 .create-image-card:hover {
@@ -624,6 +639,7 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .create-image-thumb {
@@ -643,6 +659,8 @@ body {
     align-items: center;
     justify-content: space-between;
     border-top: 1px solid #f1f5f9;
+    flex-shrink: 0;
+    margin-top: auto;
 }
 
 .create-page-badge {
