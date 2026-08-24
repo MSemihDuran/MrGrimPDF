@@ -934,11 +934,7 @@ async function getImageForPdf(item, pdfDoc) {
     });
 }
 
-async function generatePdfWithPdfLib(options) {
-    if (!window.PDFLib) throw new Error('PDFLib not available');
-    const { PDFDocument } = window.PDFLib;
-    const pdfDoc = await PDFDocument.create();
-
+async function generatePdfWithClientEngine(options) {
     const ptPerMm = 72 / 25.4;
     const ptPerCm = 72 / 2.54;
     const ptPerInch = 72;
@@ -994,51 +990,112 @@ async function generatePdfWithPdfLib(options) {
         margin = getPoints(options.customMargin, options.marginUnit || 'mm');
     }
 
-    // Embed gallery images
-    if (options.images && options.images.length > 0 && !options.content) {
-        for (const item of options.images) {
-            const imgData = await getImageForPdf(item, pdfDoc);
-            if (!imgData) continue;
+    // Engine 1: jsPDF (Fastest, ultra-reliable with images)
+    if (window.jspdf && window.jspdf.jsPDF) {
+        const { jsPDF } = window.jspdf;
+        let doc = null;
+        let isFirst = true;
 
-            const imgW = imgData.width;
-            const imgH = imgData.height;
+        for (const item of (options.images || [])) {
+            const canvas = document.createElement('canvas');
+            const img = await new Promise((res) => {
+                const i = new Image();
+                i.crossOrigin = 'anonymous';
+                i.onload = () => res(i);
+                i.onerror = () => res(null);
+                i.src = item.dataUrl || (item.file ? URL.createObjectURL(item.file) : '');
+            });
+
+            if (!img) continue;
+
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            const imgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            const imgW = canvas.width;
+            const imgH = canvas.height;
+
+            let curPageW = pageW;
+            let curPageH = pageH;
+            let curOrient = options.orientation || 'portrait';
 
             if (pageKey === 'fit') {
-                const page = pdfDoc.addPage([imgW, imgH]);
-                page.drawImage(imgData.embedded, {
-                    x: 0,
-                    y: 0,
-                    width: imgW,
-                    height: imgH
+                curPageW = imgW;
+                curPageH = imgH;
+                curOrient = imgW > imgH ? 'landscape' : 'portrait';
+            }
+
+            if (isFirst) {
+                doc = new jsPDF({
+                    orientation: curOrient,
+                    unit: 'pt',
+                    format: [curPageW, curPageH]
                 });
+                isFirst = false;
+            } else {
+                doc.addPage([curPageW, curPageH], curOrient);
+            }
+
+            if (pageKey === 'fit') {
+                doc.addImage(imgDataUrl, 'JPEG', 0, 0, curPageW, curPageH, undefined, 'FAST');
+            } else {
+                const availW = Math.max(10, curPageW - (margin * 2));
+                const availH = Math.max(10, curPageH - (margin * 2));
+                const scale = Math.min(availW / imgW, availH / imgH);
+                const drawW = imgW * scale;
+                const drawH = imgH * scale;
+                const drawX = margin + (availW - drawW) / 2;
+                const drawY = margin + (availH - drawH) / 2;
+                doc.addImage(imgDataUrl, 'JPEG', drawX, drawY, drawW, drawH, undefined, 'FAST');
+            }
+        }
+
+        if (!doc) {
+            doc = new jsPDF({
+                orientation: options.orientation || 'portrait',
+                unit: 'pt',
+                format: [pageW, pageH]
+            });
+        }
+
+        return doc.output('blob');
+    }
+
+    // Engine 2: PDFLib fallback
+    const pdfLibObj = window.PDFLib || window.pdfLib;
+    if (pdfLibObj) {
+        const { PDFDocument } = pdfLibObj;
+        const pdfDoc = await PDFDocument.create();
+        for (const item of (options.images || [])) {
+            const imgData = await getImageForPdf(item, pdfDoc);
+            if (!imgData) continue;
+            const imgW = imgData.width;
+            const imgH = imgData.height;
+            if (pageKey === 'fit') {
+                const page = pdfDoc.addPage([imgW, imgH]);
+                page.drawImage(imgData.embedded, { x: 0, y: 0, width: imgW, height: imgH });
             } else {
                 const page = pdfDoc.addPage([pageW, pageH]);
                 const availW = Math.max(10, pageW - (margin * 2));
                 const availH = Math.max(10, pageH - (margin * 2));
-
                 const scale = Math.min(availW / imgW, availH / imgH);
                 const drawW = imgW * scale;
                 const drawH = imgH * scale;
-
                 const drawX = margin + (availW - drawW) / 2;
                 const drawY = margin + (availH - drawH) / 2;
-
-                page.drawImage(imgData.embedded, {
-                    x: drawX,
-                    y: drawY,
-                    width: drawW,
-                    height: drawH
-                });
+                page.drawImage(imgData.embedded, { x: drawX, y: drawY, width: drawW, height: drawH });
             }
         }
+        if (pdfDoc.getPageCount() === 0) pdfDoc.addPage([pageW, pageH]);
+        const bytes = await pdfDoc.save();
+        return new Blob([bytes], { type: 'application/pdf' });
     }
 
-    if (pdfDoc.getPageCount() === 0) {
-        pdfDoc.addPage([pageW, pageH]);
-    }
-
-    const pdfBytes = await pdfDoc.save();
-    return new Blob([pdfBytes], { type: 'application/pdf' });
+    throw new Error('PDF motoru hazırlanıyor, lütfen 1 saniye sonra tekrar deneyin.');
 }
 
 function updateDownloadFilename(newVal) {
@@ -1081,7 +1138,7 @@ async function executeCurrentTool() {
         // 1. High-Performance Client-Side Generation (0 network lag, 0 file-size limit!)
         if (state.createImages.length > 0 || (!content && !title)) {
             try {
-                const pdfBlob = await generatePdfWithPdfLib({
+                const pdfBlob = await generatePdfWithClientEngine({
                     title, content, pageSize, orientation, marginType,
                     customW, customH, customUnit, customMargin: customMarg, marginUnit: margUnit,
                     images: state.createImages
