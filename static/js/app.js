@@ -893,6 +893,165 @@ function toggleCustomMarginInputs(val) {
     }
 }
 
+function convertImageToPngBytes(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob(async blob => {
+                if (blob) {
+                    const buf = await blob.arrayBuffer();
+                    resolve(buf);
+                } else {
+                    reject(new Error('Canvas toBlob failed'));
+                }
+            }, 'image/png');
+        };
+        img.onerror = () => reject(new Error('Image failed to load'));
+        img.src = src;
+    });
+}
+
+async function generatePdfWithPdfLib(options) {
+    if (!window.PDFLib) throw new Error('PDFLib not available');
+    const { PDFDocument, rgb } = window.PDFLib;
+    const pdfDoc = await PDFDocument.create();
+
+    const ptPerMm = 72 / 25.4;
+    const ptPerCm = 72 / 2.54;
+    const ptPerInch = 72;
+
+    function getPoints(val, unit) {
+        const v = parseFloat(val) || 0;
+        const u = String(unit).toLowerCase();
+        if (u === 'mm') return v * ptPerMm;
+        if (u === 'cm') return v * ptPerCm;
+        if (u === 'in' || u === 'inch') return v * ptPerInch;
+        return v; // pt/px
+    }
+
+    const standardSizes = {
+        'a0': [2384, 3370],
+        'a1': [1684, 2384],
+        'a2': [1191, 1684],
+        'a3': [842, 1191],
+        'a4': [595.28, 841.89],
+        'a5': [419.53, 595.28],
+        'a6': [297.64, 419.53],
+        'b4': [708.66, 1000.63],
+        'b5': [498.90, 708.66],
+        'letter': [612, 792],
+        'legal': [612, 1008],
+        'tabloid': [792, 1224],
+        'executive': [522, 756]
+    };
+
+    let baseW = 595.28;
+    let baseH = 841.89;
+    const pageKey = (options.pageSize || 'a4').toLowerCase();
+
+    if (pageKey === 'custom' && options.customW && options.customH) {
+        baseW = getPoints(options.customW, options.customUnit || 'mm') || 595.28;
+        baseH = getPoints(options.customH, options.customUnit || 'mm') || 841.89;
+    } else if (standardSizes[pageKey]) {
+        [baseW, baseH] = standardSizes[pageKey];
+    }
+
+    let pageW = options.orientation === 'landscape' ? Math.max(baseW, baseH) : Math.min(baseW, baseH);
+    let pageH = options.orientation === 'landscape' ? Math.min(baseW, baseH) : Math.max(baseW, baseH);
+
+    // Margins
+    let margin = 34.01; // standard ~12mm
+    if (options.marginType === 'none') {
+        margin = 0;
+    } else if (options.marginType === 'small') {
+        margin = 14.17; // 5mm
+    } else if (options.marginType === 'large') {
+        margin = 56.69; // 20mm
+    } else if (options.marginType === 'custom' && options.customMargin !== undefined) {
+        margin = getPoints(options.customMargin, options.marginUnit || 'mm');
+    }
+
+    // Embed gallery images
+    if (options.images && options.images.length > 0 && !options.content) {
+        for (const item of options.images) {
+            let embeddedImg = null;
+            let imgBytes = null;
+
+            if (item.file) {
+                imgBytes = await item.file.arrayBuffer();
+            } else if (item.dataUrl) {
+                const res = await fetch(item.dataUrl);
+                imgBytes = await res.arrayBuffer();
+            }
+
+            if (imgBytes) {
+                const isPng = (item.file && item.file.type === 'image/png') || (item.name && item.name.toLowerCase().endsWith('.png'));
+                try {
+                    if (isPng) {
+                        embeddedImg = await pdfDoc.embedPng(imgBytes);
+                    } else {
+                        embeddedImg = await pdfDoc.embedJpg(imgBytes);
+                    }
+                } catch (embedErr) {
+                    try {
+                        const fallbackBytes = await convertImageToPngBytes(item.dataUrl || URL.createObjectURL(item.file));
+                        embeddedImg = await pdfDoc.embedPng(fallbackBytes);
+                    } catch (e) {
+                        console.error('Failed to embed image:', item.name, e);
+                        continue;
+                    }
+                }
+            }
+
+            if (!embeddedImg) continue;
+
+            const imgW = embeddedImg.width;
+            const imgH = embeddedImg.height;
+
+            if (pageKey === 'fit') {
+                const page = pdfDoc.addPage([imgW, imgH]);
+                page.drawImage(embeddedImg, {
+                    x: 0,
+                    y: 0,
+                    width: imgW,
+                    height: imgH
+                });
+            } else {
+                const page = pdfDoc.addPage([pageW, pageH]);
+                const availW = Math.max(10, pageW - (margin * 2));
+                const availH = Math.max(10, pageH - (margin * 2));
+
+                const scale = Math.min(availW / imgW, availH / imgH);
+                const drawW = imgW * scale;
+                const drawH = imgH * scale;
+
+                const drawX = margin + (availW - drawW) / 2;
+                const drawY = margin + (availH - drawH) / 2;
+
+                page.drawImage(embeddedImg, {
+                    x: drawX,
+                    y: drawY,
+                    width: drawW,
+                    height: drawH
+                });
+            }
+        }
+    }
+
+    if (pdfDoc.getPageCount() === 0) {
+        pdfDoc.addPage([pageW, pageH]);
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
 function updateDownloadFilename(newVal) {
     const dlBtn = document.getElementById('downloadResultBtn');
     if (dlBtn) {
@@ -916,28 +1075,55 @@ async function executeCurrentTool() {
         const content = (document.getElementById('createDocContentInput') ? document.getElementById('createDocContentInput').value : '') || '';
         const pageSize = document.getElementById('createPageSizeSelect') ? document.getElementById('createPageSizeSelect').value : 'a4';
         const orientation = state.docOrientation || 'portrait';
+        const marginType = document.getElementById('createMarginSelect') ? document.getElementById('createMarginSelect').value : 'standard';
+
+        const customW = document.getElementById('customWidthInput') ? document.getElementById('customWidthInput').value : '210';
+        const customH = document.getElementById('customHeightInput') ? document.getElementById('customHeightInput').value : '297';
+        const customUnit = document.getElementById('customUnitSelect') ? document.getElementById('customUnitSelect').value : 'mm';
+        const customMarg = document.getElementById('customMarginValueInput') ? document.getElementById('customMarginValueInput').value : '10';
+        const margUnit = document.getElementById('customMarginUnitSelect') ? document.getElementById('customMarginUnitSelect').value : 'mm';
+
+        // Format default date & time filename
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const defaultFilename = `MrGrimPDF_${dateStr}.pdf`;
+
+        // 1. High-Performance Client-Side Generation (0 network lag, 0 file-size limit!)
+        if (window.PDFLib && (state.createImages.length > 0 || (!content && !title))) {
+            try {
+                const pdfBlob = await generatePdfWithPdfLib({
+                    title, content, pageSize, orientation, marginType,
+                    customW, customH, customUnit, customMargin: customMarg, marginUnit: margUnit,
+                    images: state.createImages
+                });
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: defaultFilename
+                });
+                return;
+            } catch (libErr) {
+                console.warn('Client PDFLib generation fallback:', libErr);
+            }
+        }
 
         // Custom dimensions if selected
         if (pageSize === 'custom') {
-            const customW = document.getElementById('customWidthInput') ? document.getElementById('customWidthInput').value : '210';
-            const customH = document.getElementById('customHeightInput') ? document.getElementById('customHeightInput').value : '297';
-            const customUnit = document.getElementById('customUnitSelect') ? document.getElementById('customUnitSelect').value : 'mm';
             formData.append('custom_w', customW);
             formData.append('custom_h', customH);
             formData.append('custom_unit', customUnit);
         }
 
         // Margin settings
-        const marginType = document.getElementById('createMarginSelect') ? document.getElementById('createMarginSelect').value : 'standard';
         formData.append('margin_type', marginType);
         if (marginType === 'custom') {
-            const customMarg = document.getElementById('customMarginValueInput') ? document.getElementById('customMarginValueInput').value : '10';
-            const margUnit = document.getElementById('customMarginUnitSelect') ? document.getElementById('customMarginUnitSelect').value : 'mm';
             formData.append('custom_margin', customMarg);
             formData.append('margin_unit', margUnit);
         }
 
-        // 1. Attach all gallery images directly in user's exact order (Single atomic request)
+        // Attach all gallery images
         if (state.createImages.length > 0) {
             state.createImages.forEach(item => {
                 if (item.file) {
@@ -950,6 +1136,7 @@ async function executeCurrentTool() {
         formData.append('content', content);
         formData.append('page_size', pageSize);
         formData.append('orientation', orientation);
+        formData.append('custom_name', defaultFilename);
 
         // Format default date & time filename
         const now = new Date();
