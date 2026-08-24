@@ -674,12 +674,26 @@
 
                             <!-- VIEW 1: Image Studio (Drag-and-Drop Sortable, Red Trash Delete, Add More Images) -->
                             <div id="createImagesView" class="create-images-view" style="display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px; flex-wrap: wrap; gap: 8px;">
                                     <div style="font-size: 0.82rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
                                         <i class="fa-solid fa-arrows-up-down-left-right text-indigo-500"></i> Sayfa Sırası: 
-                                        <span style="font-weight: 500; color: #64748b;">(Resimleri sürükleyip bırakarak PDF sırasını değiştirebilirsiniz)</span>
+                                        <span style="font-weight: 500; color: #64748b;">(Sürükleyip bırakarak veya butonlarla sıralayın)</span>
                                     </div>
-                                    <span id="createImagesCountBadge" class="create-page-badge">0 Resim</span>
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <!-- Sort Order Toolbar -->
+                                        <div class="create-sort-toolbar">
+                                            <button type="button" class="btn-sort-pill active" id="btnSortSelection" onclick="sortCreateImages('selection')" title="Dosyaları ekleme / seçim sırasına göre dizer">
+                                                <i class="fa-solid fa-list-ol text-indigo-500"></i> Seçim Sırası
+                                            </button>
+                                            <button type="button" class="btn-sort-pill" id="btnSortAZ" onclick="sortCreateImages('az')" title="Dosya isimlerine göre A'dan Z'ye alfabetik dizer">
+                                                <i class="fa-solid fa-arrow-down-a-z text-pink-500"></i> A ➔ Z
+                                            </button>
+                                            <button type="button" class="btn-sort-pill" id="btnSortZA" onclick="sortCreateImages('za')" title="Dosya isimlerine göre Z'den A'ya ters alfabetik dizer">
+                                                <i class="fa-solid fa-arrow-up-z-a text-amber-500"></i> Z ➔ A
+                                            </button>
+                                        </div>
+                                        <span id="createImagesCountBadge" class="create-page-badge">0 Resim</span>
+                                    </div>
                                 </div>
 
                                 <div id="createImagesGrid" class="create-images-grid">

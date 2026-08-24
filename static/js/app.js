@@ -844,6 +844,7 @@ function clearCanvas() {
 state.docOrientation = 'portrait';
 state.createImages = [];
 state.createTab = 'images';
+state.imageSortMode = 'selection'; // 'selection', 'az', 'za', 'custom'
 
 function switchCreateTab(tab) {
     state.createTab = tab;
@@ -865,30 +866,69 @@ function switchCreateTab(tab) {
     }
 }
 
-function handleCreatePdfImageAttach(input) {
+function updateSortToolbarUI() {
+    const selBtn = document.getElementById('btnSortSelection');
+    const azBtn = document.getElementById('btnSortAZ');
+    const zaBtn = document.getElementById('btnSortZA');
+
+    if (selBtn) selBtn.classList.toggle('active', state.imageSortMode === 'selection');
+    if (azBtn) azBtn.classList.toggle('active', state.imageSortMode === 'az');
+    if (zaBtn) zaBtn.classList.toggle('active', state.imageSortMode === 'za');
+}
+
+function sortCreateImages(mode, reRender = true) {
+    state.imageSortMode = mode;
+    updateSortToolbarUI();
+
+    if (mode === 'selection') {
+        state.createImages.sort((a, b) => (a.selectionIndex ?? 0) - (b.selectionIndex ?? 0));
+    } else if (mode === 'az') {
+        state.createImages.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    } else if (mode === 'za') {
+        state.createImages.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+
+    if (reRender) {
+        renderCreateImagesGrid();
+    }
+}
+
+async function handleCreatePdfImageAttach(input) {
     if (!input.files || input.files.length === 0) return;
 
     const files = Array.from(input.files);
-    let loadedCount = 0;
+    const startIndex = state.createImages.length;
 
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const imgObj = {
-                id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-                file: file,
-                dataUrl: e.target.result,
-                name: file.name,
-                size: (file.size / 1024).toFixed(1) + ' KB'
+    // Load all files synchronously / preserving exact selection order
+    const loadPromises = files.map((file, idx) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                resolve({
+                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    file: file,
+                    dataUrl: e.target.result,
+                    name: file.name,
+                    size: (file.size / 1024).toFixed(1) + ' KB',
+                    selectionIndex: startIndex + idx
+                });
             };
-            state.createImages.push(imgObj);
-            loadedCount++;
-            if (loadedCount === files.length) {
-                renderCreateImagesGrid();
-            }
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     });
+
+    const newImgs = await Promise.all(loadPromises);
+    state.createImages.push(...newImgs);
+
+    if (state.imageSortMode === 'az') {
+        sortCreateImages('az', true);
+    } else if (state.imageSortMode === 'za') {
+        sortCreateImages('za', true);
+    } else if (state.imageSortMode === 'selection') {
+        sortCreateImages('selection', true);
+    } else {
+        renderCreateImagesGrid();
+    }
 
     input.value = '';
 }
@@ -896,6 +936,8 @@ function handleCreatePdfImageAttach(input) {
 function renderCreateImagesGrid() {
     const grid = document.getElementById('createImagesGrid');
     if (!grid) return;
+
+    updateSortToolbarUI();
 
     const badge = document.getElementById('createImagesCountBadge');
     if (badge) badge.textContent = `${state.createImages.length} Resim`;
@@ -942,7 +984,14 @@ function renderCreateImagesGrid() {
                 const domCards = Array.from(grid.querySelectorAll('.create-image-card'));
                 const newOrderIds = domCards.map(c => c.getAttribute('data-id'));
                 state.createImages.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
-                renderCreateImagesGrid();
+                // Drag and drop marks as custom manual order
+                state.imageSortMode = 'custom';
+                updateSortToolbarUI();
+                // Update page numbering badges
+                domCards.forEach((c, idx) => {
+                    const badge = c.querySelector('.create-page-badge');
+                    if (badge) badge.textContent = `Sayfa ${idx + 1}`;
+                });
             }
         });
         grid._hasSortable = true;
