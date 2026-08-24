@@ -323,26 +323,102 @@ function renderDynamicToolOptions(toolKey) {
         case 'create-pdf':
             container.innerHTML = `
                 <div class="config-group">
-                    <label class="config-label">Page Size & Format</label>
-                    <select id="createPageSizeSelect" class="config-select">
-                        <option value="a4">Standard A4 (210 x 297 mm)</option>
-                        <option value="letter">US Letter (8.5 x 11 in)</option>
+                    <label class="config-label">Sayfa Boyutu (Page Size)</label>
+                    <select id="createPageSizeSelect" class="config-select" onchange="toggleCustomSizeInputs(this.value)">
+                        <optgroup label="Standart ISO / A Serisi">
+                            <option value="a0">A0 (841 x 1189 mm)</option>
+                            <option value="a1">A1 (594 x 841 mm)</option>
+                            <option value="a2">A2 (420 x 594 mm)</option>
+                            <option value="a3">A3 (297 x 420 mm)</option>
+                            <option value="a4" selected>A4 (210 x 297 mm)</option>
+                            <option value="a5">A5 (148 x 210 mm)</option>
+                            <option value="a6">A6 (105 x 148 mm)</option>
+                        </optgroup>
+                        <optgroup label="B Serisi">
+                            <option value="b4">B4 (250 x 353 mm)</option>
+                            <option value="b5">B5 (176 x 250 mm)</option>
+                        </optgroup>
+                        <optgroup label="Amerikan / Uluslararası">
+                            <option value="letter">US Letter (8.5 x 11 in)</option>
+                            <option value="legal">US Legal (8.5 x 14 in)</option>
+                            <option value="tabloid">Tabloid / Ledger (11 x 17 in)</option>
+                            <option value="executive">Executive (7.25 x 10.5 in)</option>
+                        </optgroup>
+                        <optgroup label="Özel & Otomatik">
+                            <option value="fit">🖼️ Resme Göre Otomatik (Fit to Image)</option>
+                            <option value="custom">⚙️ Özel Boyut Belirle (Custom Size)...</option>
+                        </optgroup>
                     </select>
                 </div>
+
+                <!-- Custom Size Inputs -->
+                <div id="customSizeContainer" class="config-group" style="display: none; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1.5px solid #cbd5e1;">
+                    <label class="config-label" style="margin-bottom: 6px; font-size: 0.78rem;">Özel Genişlik & Yükseklik</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 85px; gap: 8px; align-items: center;">
+                        <div>
+                            <span style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Genişlik (W)</span>
+                            <input type="number" id="customWidthInput" class="config-input" value="210" min="1" step="any" placeholder="Genişlik">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Yükseklik (H)</span>
+                            <input type="number" id="customHeightInput" class="config-input" value="297" min="1" step="any" placeholder="Yükseklik">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Birim</span>
+                            <select id="customUnitSelect" class="config-select">
+                                <option value="mm" selected>mm</option>
+                                <option value="cm">cm</option>
+                                <option value="in">inch</option>
+                                <option value="pt">pt / px</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Margin / Kenar Boşluğu -->
                 <div class="config-group">
-                    <label class="config-label">Page Orientation</label>
+                    <label class="config-label">Kenar Boşluğu (Margin)</label>
+                    <select id="createMarginSelect" class="config-select" onchange="toggleCustomMarginInputs(this.value)">
+                        <option value="none">Kenar Boşluğu Yok (0 mm - Tam Sayfa)</option>
+                        <option value="small">Küçük (5 mm)</option>
+                        <option value="standard" selected>Standart (12 mm)</option>
+                        <option value="large">Geniş (20 mm)</option>
+                        <option value="custom">⚙️ Özel Kenar Boşluğu (Custom Margin)...</option>
+                    </select>
+                </div>
+
+                <!-- Custom Margin Input -->
+                <div id="customMarginContainer" class="config-group" style="display: none; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1.5px solid #cbd5e1;">
+                    <label class="config-label" style="margin-bottom: 6px; font-size: 0.78rem;">Özel Boşluk Değeri</label>
+                    <div style="display: grid; grid-template-columns: 1fr 85px; gap: 8px; align-items: center;">
+                        <div>
+                            <input type="number" id="customMarginValueInput" class="config-input" value="10" min="0" step="any" placeholder="Boşluk Değeri">
+                        </div>
+                        <div>
+                            <select id="customMarginUnitSelect" class="config-select">
+                                <option value="mm" selected>mm</option>
+                                <option value="cm">cm</option>
+                                <option value="in">inch</option>
+                                <option value="pt">pt</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Sayfa Yönü (Orientation)</label>
                     <div style="display:flex; gap:10px;">
-                        <button type="button" class="btn-tool-sm active" id="orientPortraitBtn" onclick="selectOrientation('portrait')"><i class="fa-solid fa-file"></i> Portrait</button>
-                        <button type="button" class="btn-tool-sm" id="orientLandscapeBtn" onclick="selectOrientation('landscape')"><i class="fa-solid fa-file fa-rotate-90"></i> Landscape</button>
+                        <button type="button" class="btn-tool-sm active" id="orientPortraitBtn" onclick="selectOrientation('portrait')"><i class="fa-solid fa-file"></i> Dikey (Portrait)</button>
+                        <button type="button" class="btn-tool-sm" id="orientLandscapeBtn" onclick="selectOrientation('landscape')"><i class="fa-solid fa-file fa-rotate-90"></i> Yatay (Landscape)</button>
                     </div>
                 </div>
                 <div class="config-group">
-                    <label class="config-label">Quick Document Templates</label>
+                    <label class="config-label">Hızlı Belge Şablonları</label>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('blank')">Blank</button>
-                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('notes')">Meeting Notes</button>
-                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('invoice')">Invoice</button>
-                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('report')">Project Report</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('blank')">Boş Belge</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('notes')">Toplantı Notları</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('invoice')">Fatura / Makbuz</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('report')">Proje Raporu</button>
                     </div>
                 </div>
             `;
@@ -803,6 +879,20 @@ function applyTemplate(type) {
     }
 }
 
+function toggleCustomSizeInputs(val) {
+    const customBox = document.getElementById('customSizeContainer');
+    if (customBox) {
+        customBox.style.display = (val === 'custom') ? 'block' : 'none';
+    }
+}
+
+function toggleCustomMarginInputs(val) {
+    const marginBox = document.getElementById('customMarginContainer');
+    if (marginBox) {
+        marginBox.style.display = (val === 'custom') ? 'block' : 'none';
+    }
+}
+
 function updateDownloadFilename(newVal) {
     const dlBtn = document.getElementById('downloadResultBtn');
     if (dlBtn) {
@@ -826,6 +916,26 @@ async function executeCurrentTool() {
         const content = (document.getElementById('createDocContentInput') ? document.getElementById('createDocContentInput').value : '') || '';
         const pageSize = document.getElementById('createPageSizeSelect') ? document.getElementById('createPageSizeSelect').value : 'a4';
         const orientation = state.docOrientation || 'portrait';
+
+        // Custom dimensions if selected
+        if (pageSize === 'custom') {
+            const customW = document.getElementById('customWidthInput') ? document.getElementById('customWidthInput').value : '210';
+            const customH = document.getElementById('customHeightInput') ? document.getElementById('customHeightInput').value : '297';
+            const customUnit = document.getElementById('customUnitSelect') ? document.getElementById('customUnitSelect').value : 'mm';
+            formData.append('custom_w', customW);
+            formData.append('custom_h', customH);
+            formData.append('custom_unit', customUnit);
+        }
+
+        // Margin settings
+        const marginType = document.getElementById('createMarginSelect') ? document.getElementById('createMarginSelect').value : 'standard';
+        formData.append('margin_type', marginType);
+        if (marginType === 'custom') {
+            const customMarg = document.getElementById('customMarginValueInput') ? document.getElementById('customMarginValueInput').value : '10';
+            const margUnit = document.getElementById('customMarginUnitSelect') ? document.getElementById('customMarginUnitSelect').value : 'mm';
+            formData.append('custom_margin', customMarg);
+            formData.append('margin_unit', margUnit);
+        }
 
         // 1. If images are attached in gallery, upload them first in user's exact order
         let uploadedImgIds = [];

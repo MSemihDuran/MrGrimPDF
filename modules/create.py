@@ -2,22 +2,83 @@ import os
 import fitz
 from PIL import Image
 
-def create_pdf_from_content(title, content, output_path, orientation='portrait', page_size='a4', images=None):
+def parse_dimension_to_points(value, unit='mm'):
+    """Convert mm, cm, inch, or pt to PDF points (72 points = 1 inch = 25.4 mm)."""
+    try:
+        val = float(value)
+    except (ValueError, TypeError):
+        return 0.0
+        
+    unit = str(unit).lower().strip()
+    if unit in ['mm', 'millimeter', 'millimeters']:
+        return val * (72.0 / 25.4)
+    elif unit in ['cm', 'centimeter', 'centimeters']:
+        return val * (72.0 / 2.54)
+    elif unit in ['in', 'inch', 'inches']:
+        return val * 72.0
+    elif unit in ['pt', 'point', 'points', 'px']:
+        return val
+    return val * (72.0 / 25.4)
+
+STANDARD_SIZES = {
+    'a0': (2384, 3370),
+    'a1': (1684, 2384),
+    'a2': (1191, 1684),
+    'a3': (842, 1191),
+    'a4': (595, 842),
+    'a5': (420, 595),
+    'a6': (298, 420),
+    'b4': (709, 1001),
+    'b5': (499, 709),
+    'letter': (612, 792),
+    'legal': (612, 1008),
+    'tabloid': (792, 1224),
+    'ledger': (1224, 792),
+    'executive': (522, 756),
+    'postcard': (283, 419)
+}
+
+def create_pdf_from_content(title, content, output_path, orientation='portrait', page_size='a4', 
+                            custom_w=None, custom_h=None, custom_unit='mm',
+                            margin_type='standard', custom_margin=None, margin_unit='mm',
+                            images=None):
     doc = fitz.open()
     
-    # Paper Dimensions (pts)
-    if page_size.lower() == 'letter':
-        page_w, page_h = (612, 792)
-    else:  # A4
-        page_w, page_h = (595, 842)
+    # 1. Determine Page Dimensions
+    page_key = str(page_size).lower().strip()
+    if page_key == 'custom' and custom_w and custom_h:
+        page_w = parse_dimension_to_points(custom_w, custom_unit)
+        page_h = parse_dimension_to_points(custom_h, custom_unit)
+        if page_w <= 0: page_w = 595
+        if page_h <= 0: page_h = 842
+    elif page_key in STANDARD_SIZES:
+        page_w, page_h = STANDARD_SIZES[page_key]
+    elif page_key == 'fit':
+        page_w, page_h = (595, 842) # fallback if text
+    else:
+        page_w, page_h = (595, 842) # default A4
         
     if orientation.lower() == 'landscape':
-        page_w, page_h = page_h, page_w
+        page_w, page_h = max(page_w, page_h), min(page_w, page_h)
+    else:
+        page_w, page_h = min(page_w, page_h), max(page_w, page_h)
+
+    # 2. Determine Margins (Points)
+    if margin_type == 'none':
+        margin = 0.0
+    elif margin_type == 'small':
+        margin = 15.0 # ~5mm
+    elif margin_type == 'large':
+        margin = 54.0 # ~19mm
+    elif margin_type == 'custom' and custom_margin is not None:
+        margin = parse_dimension_to_points(custom_margin, margin_unit)
+    else: # standard
+        margin = 32.0 # ~11mm
 
     has_text = bool(content and content.strip())
     has_title = bool(title and title.strip() and title.strip() != 'Untitled Document')
     
-    # CASE A: ONLY IMAGES (or Images Primary Mode)
+    # CASE A: ONLY IMAGES (Images to PDF Mode)
     if images and isinstance(images, list) and not has_text and not has_title:
         for img_path in images:
             if os.path.exists(img_path):
@@ -25,54 +86,57 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
                     img = Image.open(img_path)
                     img_w, img_h = img.size
                     
-                    # Create page matching image aspect ratio or standard page
-                    page = doc.new_page(width=page_w, height=page_h)
-                    
-                    margin = 25
-                    target_rect = fitz.Rect(margin, margin, page_w - margin, page_h - margin)
-                    page.insert_image(target_rect, filename=img_path, keep_proportion=True)
+                    if page_key == 'fit':
+                        # Match page exact size to image (no distortion or borders)
+                        cur_w = float(img_w)
+                        cur_h = float(img_h)
+                        page = doc.new_page(width=cur_w, height=cur_h)
+                        rect = fitz.Rect(0, 0, cur_w, cur_h)
+                        page.insert_image(rect, filename=img_path)
+                    else:
+                        page = doc.new_page(width=page_w, height=page_h)
+                        target_rect = fitz.Rect(margin, margin, page_w - margin, page_h - margin)
+                        page.insert_image(target_rect, filename=img_path, keep_proportion=True)
                 except Exception as e:
                     print(f"Error embedding image {img_path}: {e}")
                     
     # CASE B: TEXT + IMAGES OR DOCUMENT MODE
     else:
-        margin = 45
-        y = margin
+        doc_margin = max(margin, 25.0)
+        y = doc_margin
         page = doc.new_page(width=page_w, height=page_h)
         
-        # 1. Add Document Title
+        # Add Title
         if has_title:
             page.insert_text(
-                fitz.Point(margin, y + 24),
+                fitz.Point(doc_margin, y + 22),
                 title,
-                fontsize=20,
+                fontsize=18,
                 fontname="helv",
-                color=(0.06, 0.09, 0.16) # #0f172a
+                color=(0.06, 0.09, 0.16)
             )
-            y += 40
-            
-            # Decorative line under title
+            y += 36
             page.draw_line(
-                fitz.Point(margin, y),
-                fitz.Point(page_w - margin, y),
-                color=(0.31, 0.27, 0.9), # Indigo
-                width=1.5
+                fitz.Point(doc_margin, y),
+                fitz.Point(page_w - doc_margin, y),
+                color=(0.31, 0.27, 0.9),
+                width=1.2
             )
-            y += 25
+            y += 20
 
-        # 2. Add Text Content
+        # Add Text
         if has_text:
             lines = content.split('\n')
             line_height = 16
             font_size = 11
             
             for line in lines:
-                if y > page_h - margin - 40:
+                if y > page_h - doc_margin - 30:
                     page = doc.new_page(width=page_w, height=page_h)
-                    y = margin
+                    y = doc_margin
                     
                 page.insert_text(
-                    fitz.Point(margin, y + font_size),
+                    fitz.Point(doc_margin, y + font_size),
                     line,
                     fontsize=font_size,
                     fontname="helv",
@@ -81,20 +145,18 @@ def create_pdf_from_content(title, content, output_path, orientation='portrait',
                 y += line_height
             y += 20
 
-        # 3. Add Embedded Images in exact order
+        # Add Embedded Images
         if images and isinstance(images, list):
             for img_path in images:
                 if os.path.exists(img_path):
-                    # Start new page for large images if space is tight
                     if y > page_h - 260:
                         page = doc.new_page(width=page_w, height=page_h)
-                        y = margin
+                        y = doc_margin
                         
-                    img_rect = fitz.Rect(margin, y, page_w - margin, min(y + 320, page_h - margin))
+                    img_rect = fitz.Rect(doc_margin, y, page_w - doc_margin, min(y + 320, page_h - doc_margin))
                     page.insert_image(img_rect, filename=img_path, keep_proportion=True)
                     y += 340
 
-    # Ensure document has at least one page
     if len(doc) == 0:
         doc.new_page(width=page_w, height=page_h)
 

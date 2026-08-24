@@ -400,8 +400,18 @@ def process_action(action):
             else:
                 out_filename = f"MrGrimPDF_{now_str}.pdf"
                 
+            custom_w = data.get('custom_w')
+            custom_h = data.get('custom_h')
+            custom_unit = data.get('custom_unit', 'mm')
+            margin_type = data.get('margin_type', 'standard')
+            custom_margin = data.get('custom_margin')
+            margin_unit = data.get('margin_unit', 'mm')
+            
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
-            create_pdf_from_content(doc_title, doc_content, out_path, orientation=orientation, page_size=page_size, images=image_paths)
+            create_pdf_from_content(doc_title, doc_content, out_path, orientation=orientation, 
+                                    page_size=page_size, custom_w=custom_w, custom_h=custom_h, custom_unit=custom_unit,
+                                    margin_type=margin_type, custom_margin=custom_margin, margin_unit=margin_unit,
+                                    images=image_paths)
 
         else:
             return jsonify({"error": f"Unknown action: {action}"}), 400
