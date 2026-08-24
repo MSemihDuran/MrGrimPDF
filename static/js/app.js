@@ -1138,12 +1138,6 @@ async function executeCurrentTool() {
         formData.append('orientation', orientation);
         formData.append('custom_name', defaultFilename);
 
-        // Format default date & time filename
-        const now = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-        formData.append('custom_name', `MrGrimPDF_${dateStr}.pdf`);
-
     } else {
         if (state.uploadedFiles.length === 0) {
             alert('Lütfen önce bir dosya seçin.');
