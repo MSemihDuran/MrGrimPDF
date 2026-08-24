@@ -381,13 +381,27 @@ def process_action(action):
             compare_pdfs(fpath1, fpath2, out_path)
 
         elif action == 'create-pdf':
-            doc_title = data.get('title', 'Untitled Document')
+            doc_title = data.get('title', '')
             doc_content = data.get('content', '')
             orientation = data.get('orientation', 'portrait')
             page_size = data.get('page_size', 'a4')
-            out_filename = f"MrGrimPDF_Document_{out_id}.pdf"
+            
+            # Handle attached images in user's specific order
+            image_ids = json.loads(data.get('image_ids', '[]'))
+            image_paths = [os.path.join(UPLOAD_FOLDER, secure_filename(fid)) for fid in image_ids if fid]
+            
+            # Format filename with current date & time or custom name
+            import datetime
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            custom_name = data.get('custom_name', '').strip()
+            if custom_name:
+                safe_base = secure_filename(custom_name).replace('.pdf', '')
+                out_filename = f"{safe_base}.pdf" if safe_base else f"MrGrimPDF_{now_str}.pdf"
+            else:
+                out_filename = f"MrGrimPDF_{now_str}.pdf"
+                
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
-            create_pdf_from_content(doc_title, doc_content, out_path, orientation=orientation, page_size=page_size)
+            create_pdf_from_content(doc_title, doc_content, out_path, orientation=orientation, page_size=page_size, images=image_paths)
 
         else:
             return jsonify({"error": f"Unknown action: {action}"}), 400

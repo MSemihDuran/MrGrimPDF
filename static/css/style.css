@@ -562,6 +562,151 @@ body {
     border: 1px solid rgba(79, 70, 229, 0.3);
 }
 
+/* Create PDF Gallery, Sortable & Tabs */
+.create-tab-pill {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.create-tab-pill.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.create-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+    padding: 10px 4px;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.create-image-card {
+    position: relative;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    cursor: grab !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+.create-image-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.18);
+    border-color: #818cf8;
+}
+
+.create-image-card:active {
+    cursor: grabbing !important;
+}
+
+.create-image-thumb-wrap {
+    width: 100%;
+    height: 110px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.create-image-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.create-image-meta {
+    padding: 6px 8px;
+    background: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #f1f5f9;
+}
+
+.create-page-badge {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+/* Floating Red Trash Button on Top Right */
+.btn-delete-img {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.btn-delete-img:hover {
+    background: #dc2626;
+    transform: scale(1.18);
+}
+
+/* Add More Images Card */
+.btn-add-more-img-card {
+    height: 144px;
+    border: 2px dashed #a5b4fc;
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #4f46e5;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    text-align: center;
+    padding: 12px;
+}
+
+.btn-add-more-img-card:hover {
+    border-color: #4f46e5;
+    background: rgba(238, 242, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(79, 70, 229, 0.12);
+}
+
 .privacy-note {
     margin-top: 10px;
     font-size: 0.82rem;

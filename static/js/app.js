@@ -134,6 +134,13 @@ function openTool(toolKey) {
         document.getElementById('stageDropHint').style.display = 'none';
         const createStage = document.getElementById('stageCreatePdfContainer');
         if (createStage) createStage.style.display = 'flex';
+        state.createImages = [];
+        switchCreateTab('images');
+        renderCreateImagesGrid();
+        const tIn = document.getElementById('createDocTitleInput');
+        const cIn = document.getElementById('createDocContentInput');
+        if (tIn) tIn.value = '';
+        if (cIn) cIn.value = '';
     }
 
     renderDynamicToolOptions(toolKey);
@@ -654,7 +661,118 @@ function clearCanvas() {
 }
 
 state.docOrientation = 'portrait';
-state.attachedImages = [];
+state.createImages = [];
+state.createTab = 'images';
+
+function switchCreateTab(tab) {
+    state.createTab = tab;
+    const imgView = document.getElementById('createImagesView');
+    const txtView = document.getElementById('createTextView');
+    const tabImg = document.getElementById('tabImagesMode');
+    const tabTxt = document.getElementById('tabTextMode');
+
+    if (tab === 'images') {
+        if (imgView) imgView.style.display = 'flex';
+        if (txtView) txtView.style.display = 'none';
+        if (tabImg) tabImg.classList.add('active');
+        if (tabTxt) tabTxt.classList.remove('active');
+    } else {
+        if (imgView) imgView.style.display = 'none';
+        if (txtView) txtView.style.display = 'flex';
+        if (tabImg) tabImg.classList.remove('active');
+        if (tabTxt) tabTxt.classList.add('active');
+    }
+}
+
+function handleCreatePdfImageAttach(input) {
+    if (!input.files || input.files.length === 0) return;
+
+    const files = Array.from(input.files);
+    let loadedCount = 0;
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imgObj = {
+                id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                file: file,
+                dataUrl: e.target.result,
+                name: file.name,
+                size: (file.size / 1024).toFixed(1) + ' KB'
+            };
+            state.createImages.push(imgObj);
+            loadedCount++;
+            if (loadedCount === files.length) {
+                renderCreateImagesGrid();
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    input.value = '';
+}
+
+function renderCreateImagesGrid() {
+    const grid = document.getElementById('createImagesGrid');
+    if (!grid) return;
+
+    const badge = document.getElementById('createImagesCountBadge');
+    if (badge) badge.textContent = `${state.createImages.length} Resim`;
+
+    grid.innerHTML = '';
+
+    state.createImages.forEach((img, idx) => {
+        const card = document.createElement('div');
+        card.className = 'create-image-card';
+        card.setAttribute('data-id', img.id);
+        card.innerHTML = `
+            <button type="button" class="btn-delete-img" onclick="removeCreateImage('${img.id}', event)" title="Bu Resmi Sil">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+            <div class="create-image-thumb-wrap">
+                <img src="${img.dataUrl}" class="create-image-thumb" alt="${img.name}">
+            </div>
+            <div class="create-image-meta">
+                <span class="create-page-badge">Sayfa ${idx + 1}</span>
+                <span style="font-size:0.75rem; color:#6366f1;"><i class="fa-solid fa-grip-vertical"></i></span>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    // Add "+ Yeni Resim Ekle" card
+    const addCard = document.createElement('div');
+    addCard.className = 'btn-add-more-img-card';
+    addCard.onclick = () => document.getElementById('createDocImageInput').click();
+    addCard.innerHTML = `
+        <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-500"></i>
+        <span>+ Yeni Resim Ekle</span>
+        <span style="font-size:0.7rem; color:#64748b;">(Sıralamaya eklenir)</span>
+    `;
+    grid.appendChild(addCard);
+
+    // Initialize SortableJS
+    if (window.Sortable && !grid._hasSortable) {
+        Sortable.create(grid, {
+            animation: 180,
+            draggable: '.create-image-card',
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                const domCards = Array.from(grid.querySelectorAll('.create-image-card'));
+                const newOrderIds = domCards.map(c => c.getAttribute('data-id'));
+                state.createImages.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+                renderCreateImagesGrid();
+            }
+        });
+        grid._hasSortable = true;
+    }
+}
+
+function removeCreateImage(id, event) {
+    if (event) event.stopPropagation();
+    state.createImages = state.createImages.filter(img => img.id !== id);
+    renderCreateImagesGrid();
+}
 
 function selectOrientation(orient) {
     state.docOrientation = orient;
@@ -665,6 +783,7 @@ function selectOrientation(orient) {
 }
 
 function applyTemplate(type) {
+    switchCreateTab('text');
     const titleInput = document.getElementById('createDocTitleInput');
     const contentInput = document.getElementById('createDocContentInput');
     if (!titleInput || !contentInput) return;
@@ -673,22 +792,25 @@ function applyTemplate(type) {
         titleInput.value = '';
         contentInput.value = '';
     } else if (type === 'notes') {
-        titleInput.value = 'Meeting Notes - ' + new Date().toLocaleDateString();
-        contentInput.value = 'Date: ' + new Date().toLocaleDateString() + '\nAttendees: \n\nAgenda:\n1. Overview & Project Milestones\n2. Technical Review\n3. Action Items\n\nKey Decisions:\n- \n\nNext Steps:';
+        titleInput.value = 'Toplantı Notları - ' + new Date().toLocaleDateString();
+        contentInput.value = 'Tarih: ' + new Date().toLocaleDateString() + '\nKatılımcılar: \n\nGündem Maddeleri:\n1. Proje Gelişimi & Durum Değerlendirmesi\n2. Teknik İnceleme\n3. Görev Dağılımı\n\nAlınan Kararlar:\n- \n\nSonraki Adımlar:';
     } else if (type === 'invoice') {
-        titleInput.value = 'INVOICE / RECEIPT #' + Math.floor(1000 + Math.random() * 9000);
-        contentInput.value = 'Billed To:\nClient Name / Company\n\nDate: ' + new Date().toLocaleDateString() + '\nDue Date: ' + new Date().toLocaleDateString() + '\n\nDescription                       Amount\n----------------------------------------\n1. Web & PDF Services             $500.00\n2. Maintenance & Support          $150.00\n----------------------------------------\nTotal Due:                        $650.00\n\nPayment Method: Bank Transfer / Crypto\nThank you for your business!';
+        titleInput.value = 'FATURA / MAKBUZ #' + Math.floor(1000 + Math.random() * 9000);
+        contentInput.value = 'Sayın:\nMüşteri / Şirket Adı\n\nTarih: ' + new Date().toLocaleDateString() + '\n\nAçıklama                          Tutar\n----------------------------------------\n1. Web & PDF Hizmetleri           ₺2,500.00\n2. Bakım ve Destek Hizmeti        ₺750.00\n----------------------------------------\nToplam Ödenecek:                  ₺3,250.00\n\nÖdeme Yöntemi: Havale / EFT / Kripto\nBizi tercih ettiğiniz için teşekkür ederiz!';
     } else if (type === 'report') {
-        titleInput.value = 'Executive Project Summary';
-        contentInput.value = '1. Executive Summary\nThis document provides an in-depth summary of current operations and metrics.\n\n2. Key Highlights\n- 100% Free & Unlimited PDF System Deployment.\n- Seamless responsive mobile support.\n- High-speed vector conversions and security features.\n\n3. Conclusion & Recommendations\nAll deliverables completed with zero errors.';
+        titleInput.value = 'Proje Değerlendirme Raporu';
+        contentInput.value = '1. Yönetici Özeti\nBu doküman projenin mevcut durumu, metrikleri ve hedefleri hakkında ayrıntılı bilgi sunar.\n\n2. Önemli Kazanımlar\n- %100 Ücretsiz & Sınırsız PDF Üretim Mimarisi.\n- Mobil uyumlu ve tam responsive arayüz.\n- Yüksek hızlı vektör dönüşümleri ve güvenlik araçları.\n\n3. Sonuç ve Öneriler\nTüm hedefler sıfır hata ile başarıyla gerçekleştirildi.';
     }
 }
 
-function handleCreatePdfImageAttach(input) {
-    if (input.files && input.files.length > 0) {
-        state.attachedImages = Array.from(input.files);
-        const countSpan = document.getElementById('createDocImagesCount');
-        if (countSpan) countSpan.textContent = `${input.files.length} image(s) attached`;
+function updateDownloadFilename(newVal) {
+    const dlBtn = document.getElementById('downloadResultBtn');
+    if (dlBtn) {
+        let clean = newVal.trim();
+        if (clean && !clean.toLowerCase().endsWith('.pdf')) {
+            clean += '.pdf';
+        }
+        dlBtn.download = clean || 'MrGrimPDF_Document.pdf';
     }
 }
 
@@ -696,19 +818,50 @@ async function executeCurrentTool() {
     const action = state.currentTool;
     const formData = new FormData();
 
+    document.getElementById('btnProcessAction').style.display = 'none';
+    document.getElementById('processProgressBar').style.display = 'block';
+
     if (action === 'create-pdf') {
-        const title = (document.getElementById('createDocTitleInput') ? document.getElementById('createDocTitleInput').value : '') || 'Untitled Document';
+        const title = (document.getElementById('createDocTitleInput') ? document.getElementById('createDocTitleInput').value : '') || '';
         const content = (document.getElementById('createDocContentInput') ? document.getElementById('createDocContentInput').value : '') || '';
         const pageSize = document.getElementById('createPageSizeSelect') ? document.getElementById('createPageSizeSelect').value : 'a4';
         const orientation = state.docOrientation || 'portrait';
-        
+
+        // 1. If images are attached in gallery, upload them first in user's exact order
+        let uploadedImgIds = [];
+        if (state.createImages.length > 0) {
+            const imgFormData = new FormData();
+            state.createImages.forEach(item => {
+                imgFormData.append('files', item.file);
+            });
+            try {
+                const upRes = await fetch('/api/upload', { method: 'POST', body: imgFormData });
+                const upData = await upRes.json();
+                if (upData.success && upData.files) {
+                    uploadedImgIds = upData.files.map(f => f.file_id);
+                }
+            } catch (err) {
+                console.error('Image upload failed', err);
+            }
+        }
+
         formData.append('title', title);
         formData.append('content', content);
         formData.append('page_size', pageSize);
         formData.append('orientation', orientation);
+        formData.append('image_ids', JSON.stringify(uploadedImgIds));
+
+        // Format default date & time filename
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        formData.append('custom_name', `MrGrimPDF_${dateStr}.pdf`);
+
     } else {
         if (state.uploadedFiles.length === 0) {
-            alert('Please upload a PDF file first.');
+            alert('Lütfen önce bir dosya seçin.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
             return;
         }
 
@@ -720,9 +873,6 @@ async function executeCurrentTool() {
             formData.append('file_id', primaryFile.file_id);
         }
     }
-
-    document.getElementById('btnProcessAction').style.display = 'none';
-    document.getElementById('processProgressBar').style.display = 'block';
 
     if (action === 'split') {
         const mode = document.getElementById('splitModeSelect').value;
@@ -746,7 +896,7 @@ async function executeCurrentTool() {
     } else if (action === 'protect') {
         const pw = document.getElementById('protectPwInput').value;
         if (!pw) {
-            alert('Please enter an encryption password.');
+            alert('Lütfen bir şifre belirleyin.');
             document.getElementById('btnProcessAction').style.display = 'block';
             document.getElementById('processProgressBar').style.display = 'none';
             return;
@@ -785,12 +935,12 @@ async function executeCurrentTool() {
         if (data.success) {
             showSuccessResult(data);
         } else {
-            alert(data.error || 'Processing failed');
+            alert(data.error || 'İşlem gerçekleştirilemedi');
             document.getElementById('btnProcessAction').style.display = 'block';
             document.getElementById('processProgressBar').style.display = 'none';
         }
     } catch (err) {
-        alert('Server error: ' + err.message);
+        alert('Sunucu hatası: ' + err.message);
         document.getElementById('btnProcessAction').style.display = 'block';
         document.getElementById('processProgressBar').style.display = 'none';
     }
@@ -805,12 +955,17 @@ function showSuccessResult(data) {
     dlBtn.href = data.download_url;
     dlBtn.download = data.filename;
 
+    const nameInput = document.getElementById('resultFilenameInput');
+    if (nameInput) {
+        nameInput.value = data.filename;
+    }
+
     if (data.stats) {
         const saved = data.stats.saved_percent;
         document.getElementById('resultDetailsText').textContent = 
-            `Compressed from ${(data.stats.original_size / 1024).toFixed(1)} KB to ${(data.stats.new_size / 1024).toFixed(1)} KB (${saved}% saved!)`;
+            `Boyut ${(data.stats.original_size / 1024).toFixed(1)} KB'den ${(data.stats.new_size / 1024).toFixed(1)} KB'ye düşürüldü (%${saved} tasarruf!)`;
     } else {
-        document.getElementById('resultDetailsText').textContent = `File ready: ${data.filename}`;
+        document.getElementById('resultDetailsText').textContent = `Dosyanız hazır: ${data.filename}`;
     }
 
     addToSessionHistory(data.filename, data.download_url);

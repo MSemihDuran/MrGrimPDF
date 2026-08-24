@@ -643,19 +643,38 @@
                             </div>
                         </div>
 
-                        <div class="stage-create-pdf-container" id="stageCreatePdfContainer" style="display: none; width: 100%; height: 100%; flex-direction: column; gap: 14px; padding: 10px;">
-                            <div style="display: flex; gap: 12px; align-items: center;">
-                                <input type="text" id="createDocTitleInput" class="config-input" style="font-size: 1.15rem; font-weight: 700; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 12px 16px; width: 100%;" placeholder="Document Title (e.g. My Document / Notes)">
+                        <div class="stage-create-pdf-container" id="stageCreatePdfContainer" style="display: none; width: 100%; height: 100%; flex-direction: column; gap: 12px; padding: 4px;">
+                            <!-- Create PDF Mode Switcher: Images vs Text -->
+                            <div class="create-mode-pills" style="display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                                <button type="button" class="create-tab-pill active" id="tabImagesMode" onclick="switchCreateTab('images')">
+                                    <i class="fa-solid fa-images text-pink-500"></i> Resimlerden PDF Yap (Images to PDF)
+                                </button>
+                                <button type="button" class="create-tab-pill" id="tabTextMode" onclick="switchCreateTab('text')">
+                                    <i class="fa-solid fa-file-lines text-indigo-500"></i> Metin / Belge Yaz (Write Text)
+                                </button>
                             </div>
-                            <div style="flex: 1; display: flex; flex-direction: column;">
-                                <textarea id="createDocContentInput" class="config-input" style="width: 100%; height: 260px; resize: vertical; font-size: 0.95rem; line-height: 1.6; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 14px; font-family: inherit;" placeholder="Type or paste your text, notes, paragraphs, lists, or document content here..."></textarea>
+
+                            <!-- VIEW 1: Image Studio (Drag-and-Drop Sortable, Red Trash Delete, Add More Images) -->
+                            <div id="createImagesView" class="create-images-view" style="display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+                                    <div style="font-size: 0.82rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-arrows-up-down-left-right text-indigo-500"></i> Sayfa Sırası: 
+                                        <span style="font-weight: 500; color: #64748b;">(Resimleri sürükleyip bırakarak PDF sırasını değiştirebilirsiniz)</span>
+                                    </div>
+                                    <span id="createImagesCountBadge" class="create-page-badge">0 Resim</span>
+                                </div>
+
+                                <div id="createImagesGrid" class="create-images-grid">
+                                    <!-- Dynamic Sortable Cards Rendered by JS -->
+                                </div>
+
+                                <input type="file" id="createDocImageInput" multiple accept="image/*,.png,.jpg,.jpeg,.webp" style="display: none;" onchange="handleCreatePdfImageAttach(this)">
                             </div>
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <label class="btn-tool-sm" style="cursor: pointer; background: #f1f5f9; padding: 8px 14px; border-radius: 10px; border: 1px solid #cbd5e1;">
-                                    <i class="fa-solid fa-image text-pink-500"></i> Attach Images (Optional)
-                                    <input type="file" id="createDocImageInput" multiple accept="image/*" style="display: none;" onchange="handleCreatePdfImageAttach(this)">
-                                </label>
-                                <span id="createDocImagesCount" style="font-size: 0.82rem; font-weight: 600; color: #64748b;">No images attached</span>
+
+                            <!-- VIEW 2: Text / Note Studio -->
+                            <div id="createTextView" class="create-text-view" style="display: none; flex-direction: column; gap: 12px; height: 100%;">
+                                <input type="text" id="createDocTitleInput" class="config-input" style="font-size: 1.1rem; font-weight: 700; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 12px 16px; width: 100%;" placeholder="Doküman Başlığı (Örn: Raporum / Notlarım)">
+                                <textarea id="createDocContentInput" class="config-input" style="width: 100%; height: 230px; resize: vertical; font-size: 0.95rem; line-height: 1.6; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 14px; font-family: inherit;" placeholder="Metninizi veya notlarınızı buraya yazın veya yapıştırın..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -678,13 +697,25 @@
                             <div class="result-icon-badge">
                                 <i class="fa-solid fa-circle-check"></i>
                             </div>
-                            <h3>Document Ready!</h3>
-                            <p id="resultDetailsText">Your processed file has been generated successfully.</p>
+                            <h3>PDF Hazır! / Document Ready!</h3>
+                            <p id="resultDetailsText">Dosyanız başarıyla oluşturuldu.</p>
+                            
+                            <!-- EDITABLE FILENAME WITH EDIT ICON (Kullanıcı indirmeden önce ismi değiştirebilir) -->
+                            <div class="filename-edit-box" style="margin-top: 16px; text-align: left;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">
+                                    İndirilecek Dosya Adı (Düzenleyebilirsiniz):
+                                </label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="text" id="resultFilenameInput" class="config-input" style="padding-right: 38px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1.5px solid #818cf8; width: 100%; border-radius: 10px;" oninput="updateDownloadFilename(this.value)">
+                                    <i class="fa-solid fa-pen-to-square" style="position: absolute; right: 12px; color: #6366f1; pointer-events: none;"></i>
+                                </div>
+                            </div>
+
                             <a href="#" id="downloadResultBtn" class="btn-gradient btn-block mt-4" download>
-                                <i class="fa-solid fa-download"></i> Download File
+                                <i class="fa-solid fa-download"></i> PDF'i İndir
                             </a>
                             <button class="btn-outline-glass btn-block mt-2" onclick="resetStudioForNewTask()">
-                                <i class="fa-solid fa-rotate-left"></i> Process Another File
+                                <i class="fa-solid fa-rotate-left"></i> Yeni PDF Oluştur
                             </button>
                         </div>
                     </div>
