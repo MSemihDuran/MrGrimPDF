@@ -151,8 +151,13 @@
                     </button>
                     <div class="dropdown-menu glass-dropdown">
                         <div class="dropdown-category">
+                            <span class="cat-title"><i class="fa-solid fa-file-circle-plus"></i> Create & Build</span>
+                            <a href="#" onclick="openTool('create-pdf')"><i class="fa-solid fa-plus text-pink-500"></i> Create New PDF</a>
+                            <a href="#" onclick="openTool('images-to-pdf')"><i class="fa-solid fa-images text-indigo-500"></i> Images to PDF</a>
+                            <a href="#" onclick="openTool('merge')"><i class="fa-solid fa-object-group text-cyan-500"></i> Merge PDFs</a>
+                        </div>
+                        <div class="dropdown-category">
                             <span class="cat-title"><i class="fa-solid fa-folder-tree"></i> Organize</span>
-                            <a href="#" onclick="openTool('merge')"><i class="fa-solid fa-object-group"></i> Merge PDFs</a>
                             <a href="#" onclick="openTool('split')"><i class="fa-solid fa-scissors"></i> Split PDF</a>
                             <a href="#" onclick="openTool('organize')"><i class="fa-solid fa-arrow-down-up-across-line"></i> Reorder Pages</a>
                             <a href="#" onclick="openTool('rotate')"><i class="fa-solid fa-rotate-right"></i> Rotate PDF</a>
@@ -258,14 +263,19 @@
             <section class="hero-section">
                 <div class="hero-glass-card" id="dropZoneHero">
                     <div class="upload-icon-badge">
-                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                        <i class="fa-solid fa-file-circle-plus"></i>
                     </div>
-                    <h1 class="hero-title">Drag & Drop PDFs</h1>
-                    <p class="hero-subtitle">100% Free, Unlimited & Open-Source PDF Tools. No email, no file limits, no registration.</p>
-                    <button class="btn-choose-files" onclick="triggerHeroUpload()">
-                        CHOOSE FILES
-                    </button>
-                    <input type="file" id="heroFileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" style="display: none;">
+                    <h1 class="hero-title">Create & Edit PDFs</h1>
+                    <p class="hero-subtitle">100% Free, Unlimited & Open-Source PDF Suite. Create new documents from scratch, convert images/text, or choose files to edit without limits.</p>
+                    <div class="hero-action-buttons">
+                        <button class="btn-hero-create" onclick="openTool('create-pdf')">
+                            <i class="fa-solid fa-plus"></i> Create New PDF
+                        </button>
+                        <button class="btn-choose-files" onclick="triggerHeroUpload()">
+                            <i class="fa-solid fa-folder-open"></i> Choose / Drop Files
+                        </button>
+                    </div>
+                    <input type="file" id="heroFileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" style="display: none;">
                     <div class="privacy-note">
                         <i class="fa-solid fa-lock text-emerald-600"></i> Privacy-First: All operations run in your private secure session or locally offline.
                     </div>
@@ -275,6 +285,7 @@
             <section class="tools-filter-bar">
                 <div class="filter-scroll-container">
                     <button class="filter-pill active" onclick="filterTools('all')">All Tools</button>
+                    <button class="filter-pill" onclick="filterTools('create')">Create</button>
                     <button class="filter-pill" onclick="filterTools('organize')">Organize</button>
                     <button class="filter-pill" onclick="filterTools('convert')">Convert</button>
                     <button class="filter-pill" onclick="filterTools('optimize')">Optimize & OCR</button>
@@ -285,6 +296,16 @@
 
             <section class="tools-grid-section">
                 <div class="tools-grid">
+                    <!-- #1 FEATURED: CREATE PDF -->
+                    <div class="glass-tool-card glow-pink-cyan" data-category="create organize" onclick="openTool('create-pdf')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap icon-create">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                        </div>
+                        <h3 class="tool-title">Create PDF</h3>
+                        <p class="tool-desc">Create blank documents, format notes, write rich text, or embed images into a new PDF.</p>
+                    </div>
+
                     <div class="glass-tool-card glow-pink-cyan" data-category="organize" onclick="openTool('merge')">
                         <div class="card-glow-corner"></div>
                         <div class="tool-icon-wrap icon-merge">
@@ -619,6 +640,22 @@
                             </div>
                             <div class="canvas-wrapper">
                                 <canvas id="drawingCanvas" width="600" height="360"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="stage-create-pdf-container" id="stageCreatePdfContainer" style="display: none; width: 100%; height: 100%; flex-direction: column; gap: 14px; padding: 10px;">
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input type="text" id="createDocTitleInput" class="config-input" style="font-size: 1.15rem; font-weight: 700; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 12px 16px; width: 100%;" placeholder="Document Title (e.g. My Document / Notes)">
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column;">
+                                <textarea id="createDocContentInput" class="config-input" style="width: 100%; height: 260px; resize: vertical; font-size: 0.95rem; line-height: 1.6; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 14px; font-family: inherit;" placeholder="Type or paste your text, notes, paragraphs, lists, or document content here..."></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <label class="btn-tool-sm" style="cursor: pointer; background: #f1f5f9; padding: 8px 14px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                                    <i class="fa-solid fa-image text-pink-500"></i> Attach Images (Optional)
+                                    <input type="file" id="createDocImageInput" multiple accept="image/*" style="display: none;" onchange="handleCreatePdfImageAttach(this)">
+                                </label>
+                                <span id="createDocImagesCount" style="font-size: 0.82rem; font-weight: 600; color: #64748b;">No images attached</span>
                             </div>
                         </div>
                     </div>

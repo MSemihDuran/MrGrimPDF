@@ -12,6 +12,7 @@ from modules.convert import pdf_to_word, pdf_to_images, images_to_pdf, pdf_to_ex
 from modules.optimize import compress_pdf, repair_pdf, ocr_pdf
 from modules.edit import add_watermark, add_page_numbers, apply_annotations
 from modules.security import protect_pdf, unlock_pdf, sign_pdf, redact_pdf, compare_pdfs
+from modules.create import create_pdf_from_content
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mrgrimpdf-super-secret-key-2026'
@@ -378,6 +379,15 @@ def process_action(action):
             out_filename = f"MrGrimPDF_Comparison_{out_id}.pdf"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
             compare_pdfs(fpath1, fpath2, out_path)
+
+        elif action == 'create-pdf':
+            doc_title = data.get('title', 'Untitled Document')
+            doc_content = data.get('content', '')
+            orientation = data.get('orientation', 'portrait')
+            page_size = data.get('page_size', 'a4')
+            out_filename = f"MrGrimPDF_Document_{out_id}.pdf"
+            out_path = os.path.join(OUTPUT_FOLDER, out_filename)
+            create_pdf_from_content(doc_title, doc_content, out_path, orientation=orientation, page_size=page_size)
 
         else:
             return jsonify({"error": f"Unknown action: {action}"}), 400

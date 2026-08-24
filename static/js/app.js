@@ -17,6 +17,7 @@ const state = {
 };
 
 const TOOLS = {
+    'create-pdf': { title: 'Create PDF', subtitle: 'Create blank documents, format notes, write rich text, or embed images into a new PDF', icon: 'fa-file-circle-plus', accept: '.pdf,.png,.jpg,.jpeg,.webp,.txt', multiple: true },
     'merge': { title: 'Merge PDFs', subtitle: 'Combine multiple PDF files into one in your chosen order', icon: 'fa-object-group', accept: '.pdf', multiple: true },
     'split': { title: 'Split PDF', subtitle: 'Extract specific pages or split document into multiple files', icon: 'fa-scissors', accept: '.pdf', multiple: false },
     'compress': { title: 'Compress PDF', subtitle: 'Reduce file size while keeping maximum visual quality', icon: 'fa-down-left-and-up-right-to-center', accept: '.pdf', multiple: false },
@@ -121,13 +122,20 @@ function openTool(toolKey) {
     document.getElementById('studioToolTitle').textContent = tool.title;
     document.getElementById('studioToolSubtitle').textContent = tool.subtitle;
     document.getElementById('studioToolIcon').innerHTML = `<i class="fa-solid ${tool.icon}"></i>`;
-    document.getElementById('processBtnText').textContent = `${tool.title} Now`;
+    document.getElementById('processBtnText').textContent = toolKey === 'create-pdf' ? 'Create PDF & Download' : `${tool.title} Now`;
 
     const fileInput = document.getElementById('studioFileInput');
     fileInput.accept = tool.accept;
     fileInput.multiple = tool.multiple;
 
     resetStudioWorkspace();
+
+    if (toolKey === 'create-pdf') {
+        document.getElementById('stageDropHint').style.display = 'none';
+        const createStage = document.getElementById('stageCreatePdfContainer');
+        if (createStage) createStage.style.display = 'flex';
+    }
+
     renderDynamicToolOptions(toolKey);
 
     document.getElementById('studioModal').classList.add('active');
@@ -144,6 +152,8 @@ function resetStudioWorkspace() {
     document.getElementById('stageDropHint').style.display = 'block';
     document.getElementById('stagePreviewContainer').style.display = 'none';
     document.getElementById('stageCanvasContainer').style.display = 'none';
+    const createStage = document.getElementById('stageCreatePdfContainer');
+    if (createStage) createStage.style.display = 'none';
     document.getElementById('studioResultState').style.display = 'none';
     document.getElementById('dynamicToolOptions').style.display = 'block';
     document.getElementById('btnProcessAction').style.display = 'block';
@@ -303,6 +313,34 @@ function renderDynamicToolOptions(toolKey) {
     container.innerHTML = '';
 
     switch (toolKey) {
+        case 'create-pdf':
+            container.innerHTML = `
+                <div class="config-group">
+                    <label class="config-label">Page Size & Format</label>
+                    <select id="createPageSizeSelect" class="config-select">
+                        <option value="a4">Standard A4 (210 x 297 mm)</option>
+                        <option value="letter">US Letter (8.5 x 11 in)</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label class="config-label">Page Orientation</label>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="btn-tool-sm active" id="orientPortraitBtn" onclick="selectOrientation('portrait')"><i class="fa-solid fa-file"></i> Portrait</button>
+                        <button type="button" class="btn-tool-sm" id="orientLandscapeBtn" onclick="selectOrientation('landscape')"><i class="fa-solid fa-file fa-rotate-90"></i> Landscape</button>
+                    </div>
+                </div>
+                <div class="config-group">
+                    <label class="config-label">Quick Document Templates</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('blank')">Blank</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('notes')">Meeting Notes</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('invoice')">Invoice</button>
+                        <button type="button" class="btn-tool-sm" onclick="applyTemplate('report')">Project Report</button>
+                    </div>
+                </div>
+            `;
+            break;
+
         case 'compress':
             container.innerHTML = `
                 <div class="config-group">
@@ -615,25 +653,76 @@ function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-async function executeCurrentTool() {
-    if (state.uploadedFiles.length === 0) {
-        alert('Please upload a PDF file first.');
-        return;
-    }
+state.docOrientation = 'portrait';
+state.attachedImages = [];
 
+function selectOrientation(orient) {
+    state.docOrientation = orient;
+    const pBtn = document.getElementById('orientPortraitBtn');
+    const lBtn = document.getElementById('orientLandscapeBtn');
+    if (pBtn) pBtn.classList.toggle('active', orient === 'portrait');
+    if (lBtn) lBtn.classList.toggle('active', orient === 'landscape');
+}
+
+function applyTemplate(type) {
+    const titleInput = document.getElementById('createDocTitleInput');
+    const contentInput = document.getElementById('createDocContentInput');
+    if (!titleInput || !contentInput) return;
+    
+    if (type === 'blank') {
+        titleInput.value = '';
+        contentInput.value = '';
+    } else if (type === 'notes') {
+        titleInput.value = 'Meeting Notes - ' + new Date().toLocaleDateString();
+        contentInput.value = 'Date: ' + new Date().toLocaleDateString() + '\nAttendees: \n\nAgenda:\n1. Overview & Project Milestones\n2. Technical Review\n3. Action Items\n\nKey Decisions:\n- \n\nNext Steps:';
+    } else if (type === 'invoice') {
+        titleInput.value = 'INVOICE / RECEIPT #' + Math.floor(1000 + Math.random() * 9000);
+        contentInput.value = 'Billed To:\nClient Name / Company\n\nDate: ' + new Date().toLocaleDateString() + '\nDue Date: ' + new Date().toLocaleDateString() + '\n\nDescription                       Amount\n----------------------------------------\n1. Web & PDF Services             $500.00\n2. Maintenance & Support          $150.00\n----------------------------------------\nTotal Due:                        $650.00\n\nPayment Method: Bank Transfer / Crypto\nThank you for your business!';
+    } else if (type === 'report') {
+        titleInput.value = 'Executive Project Summary';
+        contentInput.value = '1. Executive Summary\nThis document provides an in-depth summary of current operations and metrics.\n\n2. Key Highlights\n- 100% Free & Unlimited PDF System Deployment.\n- Seamless responsive mobile support.\n- High-speed vector conversions and security features.\n\n3. Conclusion & Recommendations\nAll deliverables completed with zero errors.';
+    }
+}
+
+function handleCreatePdfImageAttach(input) {
+    if (input.files && input.files.length > 0) {
+        state.attachedImages = Array.from(input.files);
+        const countSpan = document.getElementById('createDocImagesCount');
+        if (countSpan) countSpan.textContent = `${input.files.length} image(s) attached`;
+    }
+}
+
+async function executeCurrentTool() {
     const action = state.currentTool;
     const formData = new FormData();
-    const primaryFile = state.uploadedFiles[0];
+
+    if (action === 'create-pdf') {
+        const title = (document.getElementById('createDocTitleInput') ? document.getElementById('createDocTitleInput').value : '') || 'Untitled Document';
+        const content = (document.getElementById('createDocContentInput') ? document.getElementById('createDocContentInput').value : '') || '';
+        const pageSize = document.getElementById('createPageSizeSelect') ? document.getElementById('createPageSizeSelect').value : 'a4';
+        const orientation = state.docOrientation || 'portrait';
+        
+        formData.append('title', title);
+        formData.append('content', content);
+        formData.append('page_size', pageSize);
+        formData.append('orientation', orientation);
+    } else {
+        if (state.uploadedFiles.length === 0) {
+            alert('Please upload a PDF file first.');
+            return;
+        }
+
+        const primaryFile = state.uploadedFiles[0];
+        if (action === 'merge' || action === 'images-to-pdf') {
+            const fileIds = state.uploadedFiles.map(f => f.file_id);
+            formData.append('file_ids', JSON.stringify(fileIds));
+        } else {
+            formData.append('file_id', primaryFile.file_id);
+        }
+    }
 
     document.getElementById('btnProcessAction').style.display = 'none';
     document.getElementById('processProgressBar').style.display = 'block';
-
-    if (action === 'merge' || action === 'images-to-pdf') {
-        const fileIds = state.uploadedFiles.map(f => f.file_id);
-        formData.append('file_ids', JSON.stringify(fileIds));
-    } else {
-        formData.append('file_id', primaryFile.file_id);
-    }
 
     if (action === 'split') {
         const mode = document.getElementById('splitModeSelect').value;

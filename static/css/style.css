@@ -501,19 +501,52 @@ body {
     line-height: 1.45;
 }
 
+.hero-action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.btn-hero-create {
+    background: linear-gradient(115deg, #4f46e5 0%, #ec4899 50%, #06b6d4 100%);
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 14px 34px;
+    border-radius: 9999px;
+    border: none;
+    box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-hero-create:hover, .btn-hero-create:active {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(236, 72, 153, 0.55);
+}
+
 .btn-choose-files {
     background: #ffffff;
     color: #1e293b;
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 800;
-    letter-spacing: 0.5px;
-    padding: 14px 44px;
+    letter-spacing: 0.3px;
+    padding: 14px 30px;
     border-radius: 9999px;
-    border: 1px solid rgba(203, 213, 225, 0.8);
+    border: 1.5px solid rgba(203, 213, 225, 0.9);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-choose-files:hover, .btn-choose-files:active {
@@ -523,8 +556,14 @@ body {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
 }
 
+.icon-create {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(236, 72, 153, 0.18));
+    color: #4f46e5;
+    border: 1px solid rgba(79, 70, 229, 0.3);
+}
+
 .privacy-note {
-    margin-top: 20px;
+    margin-top: 10px;
     font-size: 0.82rem;
     font-weight: 600;
     color: #059669;
