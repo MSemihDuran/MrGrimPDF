@@ -1252,6 +1252,67 @@ async function generatePdfWithClientEngine(options) {
     throw new Error('PDF motoru hazırlanıyor, lütfen 1 saniye sonra tekrar deneyin.');
 }
 
+async function compressPdfInBrowser(file, level) {
+    if (!window.pdfjsLib || !window.jspdf) {
+        throw new Error('Gerekli PDF motoru yüklenemedi.');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdfDoc.numPages;
+
+    const { jsPDF } = window.jspdf;
+    let doc = null;
+
+    let quality = 0.82;
+    let scaleFactor = 1.8;
+    if (level === 'extreme') {
+        quality = 0.68;
+        scaleFactor = 1.4;
+    } else if (level === 'low') {
+        quality = 0.90;
+        scaleFactor = 2.2;
+    }
+
+    const progText = document.getElementById('progressText');
+    const progFill = document.getElementById('progressFill');
+
+    for (let p = 1; p <= numPages; p++) {
+        if (progText) progText.textContent = `Sayfa ${p} / ${numPages} optimize ediliyor...`;
+        if (progFill) progFill.style.width = `${Math.round((p / numPages) * 100)}%`;
+
+        const page = await pdfDoc.getPage(p);
+        const viewport = page.getViewport({ scale: scaleFactor });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+        const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+        const ptWidth = (page.view && page.view[2]) ? (page.view[2] - page.view[0]) : 595.28;
+        const ptHeight = (page.view && page.view[3]) ? (page.view[3] - page.view[1]) : 841.89;
+        const orient = ptWidth > ptHeight ? 'landscape' : 'portrait';
+
+        if (p === 1) {
+            doc = new jsPDF({
+                orientation: orient,
+                unit: 'pt',
+                format: [ptWidth, ptHeight]
+            });
+        } else {
+            doc.addPage([ptWidth, ptHeight], orient);
+        }
+
+        doc.addImage(imgDataUrl, 'JPEG', 0, 0, ptWidth, ptHeight, undefined, 'FAST');
+    }
+
+    return doc.output('blob');
+}
+
 function updateDownloadFilename(newVal) {
     const dlBtn = document.getElementById('downloadResultBtn');
     if (dlBtn) {
@@ -1390,6 +1451,36 @@ async function executeCurrentTool() {
             formData.append('extract_pages', JSON.stringify(values));
         }
     } else if (action === 'compress') {
+        const rawFile = (state.rawFiles && state.rawFiles[0]);
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // Direct client-side compression for large files (>4MB) on Vercel to bypass 4.5MB request entity limits
+        if (!isLocal && rawFile && rawFile.size > 4 * 1024 * 1024) {
+            try {
+                const compBlob = await compressPdfInBrowser(rawFile, state.compressLevel);
+                const blobUrl = URL.createObjectURL(compBlob);
+                const origSize = rawFile.size;
+                const newSize = compBlob.size;
+                const savedPct = Math.max(0, Math.round(((origSize - newSize) / origSize) * 100));
+                const now = new Date();
+                const outFilename = `MrGrimPDF_Compressed_${now.getTime().toString(36)}.pdf`;
+
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: outFilename,
+                    stats: {
+                        original_size: origSize,
+                        new_size: newSize,
+                        saved_percent: savedPct
+                    }
+                });
+                return;
+            } catch (browserErr) {
+                console.warn('Browser compression fallback:', browserErr);
+            }
+        }
+
         formData.append('level', state.compressLevel);
     } else if (action === 'watermark') {
         const type = document.getElementById('wmTypeSelect').value;
@@ -1446,7 +1537,7 @@ async function executeCurrentTool() {
             document.getElementById('processProgressBar').style.display = 'none';
             return;
         }
-        formData.append('signature_data', canvas.toDataURL());
+        formData.append('signature_data', canvas.toDataURL('image/png'));
         formData.append('page', 1);
     } else if (action === 'edit') {
         if (!state.canvasHasInk) {
@@ -1484,6 +1575,30 @@ async function executeCurrentTool() {
             method: 'POST',
             body: formData
         });
+
+        // If Vercel or server returns 413 (Payload Too Large), fallback to in-browser engine!
+        if (res.status === 413 && action === 'compress' && state.rawFiles && state.rawFiles[0]) {
+            const compBlob = await compressPdfInBrowser(state.rawFiles[0], state.compressLevel);
+            const blobUrl = URL.createObjectURL(compBlob);
+            const origSize = state.rawFiles[0].size;
+            const newSize = compBlob.size;
+            const savedPct = Math.max(0, Math.round(((origSize - newSize) / origSize) * 100));
+            const now = new Date();
+            const outFilename = `MrGrimPDF_Compressed_${now.getTime().toString(36)}.pdf`;
+
+            showSuccessResult({
+                success: true,
+                download_url: blobUrl,
+                filename: outFilename,
+                stats: {
+                    original_size: origSize,
+                    new_size: newSize,
+                    saved_percent: savedPct
+                }
+            });
+            return;
+        }
+
         const data = await res.json();
 
         if (data.success) {
@@ -1494,7 +1609,33 @@ async function executeCurrentTool() {
             document.getElementById('processProgressBar').style.display = 'none';
         }
     } catch (err) {
-        alert('Sunucu hatası: ' + err.message);
+        // Network or parse error fallback
+        if (action === 'compress' && state.rawFiles && state.rawFiles[0]) {
+            try {
+                const compBlob = await compressPdfInBrowser(state.rawFiles[0], state.compressLevel);
+                const blobUrl = URL.createObjectURL(compBlob);
+                const origSize = state.rawFiles[0].size;
+                const newSize = compBlob.size;
+                const savedPct = Math.max(0, Math.round(((origSize - newSize) / origSize) * 100));
+                const now = new Date();
+                const outFilename = `MrGrimPDF_Compressed_${now.getTime().toString(36)}.pdf`;
+
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: outFilename,
+                    stats: {
+                        original_size: origSize,
+                        new_size: newSize,
+                        saved_percent: savedPct
+                    }
+                });
+                return;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        alert('İşlem sırasında hata oluştu: ' + err.message);
         document.getElementById('btnProcessAction').style.display = 'block';
         document.getElementById('processProgressBar').style.display = 'none';
     }
