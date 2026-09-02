@@ -14,6 +14,7 @@ from modules.optimize import compress_pdf, repair_pdf, ocr_pdf
 from modules.edit import add_watermark, add_page_numbers, apply_annotations
 from modules.security import protect_pdf, unlock_pdf, sign_pdf, redact_pdf, compare_pdfs
 from modules.create import create_pdf_from_content
+from modules.card_sheet import generate_card_sheet
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mrgrimpdf-super-secret-key-2026'
@@ -112,7 +113,8 @@ def health():
             "pdf-to-word", "pdf-to-images", "images-to-pdf", "pdf-to-excel", "pdf-to-pptx", "pdf-to-pdfa",
             "compress", "repair", "ocr",
             "watermark", "page-numbers", "edit",
-            "protect", "unlock", "sign", "redact", "compare"
+            "protect", "unlock", "sign", "redact", "compare",
+            "game-cards-a3"
         ]
     })
 
@@ -538,6 +540,72 @@ def process_action(action):
                                     page_size=page_size, custom_w=custom_w, custom_h=custom_h, custom_unit=custom_unit,
                                     margin_type=margin_type, custom_margin=custom_margin, margin_unit=margin_unit,
                                     images=image_paths)
+
+        elif action == 'game-cards-a3':
+            # 1. Direct multipart image uploads
+            uploaded_images = request.files.getlist('images') or request.files.getlist('files')
+            image_paths = []
+            if uploaded_images:
+                for idx, img_file in enumerate(uploaded_images):
+                    if img_file and img_file.filename:
+                        safe_orig = secure_filename(img_file.filename) or f"card_{idx}.png"
+                        tmp_name = f"card_{out_id}_{idx}_{safe_orig}"
+                        tmp_path = os.path.join(UPLOAD_FOLDER, tmp_name)
+                        img_file.save(tmp_path)
+                        image_paths.append(tmp_path)
+
+            # 2. Fallback to image_ids / file_ids
+            if not image_paths:
+                fids_raw = data.get('image_ids') or data.get('file_ids')
+                if fids_raw:
+                    try:
+                        fids = json.loads(fids_raw) if isinstance(fids_raw, str) else fids_raw
+                        for fid in fids:
+                            if fid:
+                                p = os.path.join(UPLOAD_FOLDER, secure_filename(fid))
+                                if os.path.exists(p):
+                                    image_paths.append(p)
+                    except Exception:
+                        pass
+
+            if not image_paths:
+                return jsonify({"error": "Lütfen en az bir oyun kartı görseli yükleyin."}), 400
+
+            fill_mode = data.get('fill_mode', 'uploaded_only')
+            rotation = data.get('rotation', 'ccw90')
+            empty_color = data.get('empty_color', 'black')
+            crop_marks = data.get('crop_marks', 'corners')
+            export_format = data.get('export_format', 'png').lower()
+            grid_order = data.get('grid_order', 'col_first')
+            try:
+                gap_mm = float(data.get('gap_mm', 2.5))
+            except (ValueError, TypeError):
+                gap_mm = 2.5
+
+            import datetime
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            custom_name = data.get('custom_name', '').strip()
+            ext = 'pdf' if export_format == 'pdf' else ('jpg' if export_format in ['jpg', 'jpeg'] else 'png')
+
+            if custom_name:
+                safe_base = secure_filename(custom_name).replace(f'.{ext}', '')
+                out_filename = f"{safe_base}.{ext}" if safe_base else f"MrGrimPDF_CardSheet_{now_str}.{ext}"
+            else:
+                out_filename = f"MrGrimPDF_CardSheet_A3_400DPI_{now_str}.{ext}"
+
+            out_path = os.path.join(OUTPUT_FOLDER, out_filename)
+            generate_card_sheet(
+                image_paths=image_paths,
+                output_path=out_path,
+                dpi=400,
+                gap_mm=gap_mm,
+                fill_mode=fill_mode,
+                rotation=rotation,
+                empty_color=empty_color,
+                crop_marks=crop_marks,
+                export_format=export_format,
+                grid_order=grid_order
+            )
 
         else:
             return jsonify({"error": f"Unknown action: {action}"}), 400

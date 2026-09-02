@@ -42,7 +42,8 @@ const TOOLS = {
     'pdf-to-pptx': { title: 'PDF to PowerPoint', subtitle: 'Convert PDF pages into PowerPoint (.pptx) slides', icon: 'fa-file-powerpoint', accept: '.pdf', multiple: false },
     'compare': { title: 'Compare PDFs', subtitle: 'Highlight visual differences between two revisions', icon: 'fa-code-compare', accept: '.pdf', multiple: true },
     'crop': { title: 'Crop PDF', subtitle: 'Crop page margins by percentages', icon: 'fa-crop-simple', accept: '.pdf', multiple: false },
-    'pdf-to-pdfa': { title: 'PDF to PDF/A', subtitle: 'Create an archival PDF/A-2b document', icon: 'fa-box-archive', accept: '.pdf', multiple: false }
+    'pdf-to-pdfa': { title: 'PDF to PDF/A', subtitle: 'Create an archival PDF/A-2b document', icon: 'fa-box-archive', accept: '.pdf', multiple: false },
+    'game-cards-a3': { title: 'Oyun Kartı Matbaa Şablonu (A3)', subtitle: 'A3 sayfasına 18 adet 5.9x8.6cm oyun kartını 400 DPI matbaa standartlarında yatay dizin', icon: 'fa-layer-group', accept: 'image/*,.png,.jpg,.jpeg,.webp', multiple: true }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -88,6 +89,25 @@ function initDragAndDrop() {
             handleFileUpload(e.target.files, state.currentTool);
         }
     });
+
+    const cardSheetStage = document.getElementById('stageCardSheetContainer');
+    if (cardSheetStage) {
+        ['dragenter', 'dragover'].forEach(name => {
+            cardSheetStage.addEventListener(name, (e) => {
+                e.preventDefault();
+            });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            cardSheetStage.addEventListener(name, (e) => {
+                e.preventDefault();
+            });
+        });
+        cardSheetStage.addEventListener('drop', (e) => {
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                handleCardBatchUpload({ files: e.dataTransfer.files });
+            }
+        });
+    }
 }
 
 function triggerHeroUpload() {
@@ -148,6 +168,14 @@ function openTool(toolKey) {
         if (cIn) cIn.value = '';
     }
 
+    if (toolKey === 'game-cards-a3') {
+        document.getElementById('stageDropHint').style.display = 'none';
+        const cardStage = document.getElementById('stageCardSheetContainer');
+        if (cardStage) cardStage.style.display = 'flex';
+        initCardSheetStudio();
+        document.getElementById('processBtnText').textContent = '400 DPI Matbaa Şablonunu Oluştur & İndir';
+    }
+
     renderDynamicToolOptions(toolKey);
 
     document.getElementById('studioModal').classList.add('active');
@@ -159,6 +187,8 @@ function closeStudio() {
     state.uploadedFiles = [];
     state.rawFiles = [];
     state.activePages = [];
+    state.cardSheetSlots = new Array(18).fill(null);
+    state.cardSheetActiveSlot = null;
 }
 
 function resetStudioWorkspace() {
@@ -169,6 +199,8 @@ function resetStudioWorkspace() {
     document.getElementById('stageCanvasContainer').style.display = 'none';
     const createStage = document.getElementById('stageCreatePdfContainer');
     if (createStage) createStage.style.display = 'none';
+    const cardStage = document.getElementById('stageCardSheetContainer');
+    if (cardStage) cardStage.style.display = 'none';
     document.getElementById('studioResultState').style.display = 'none';
     document.getElementById('dynamicToolOptions').style.display = 'block';
     document.getElementById('btnProcessAction').style.display = 'block';
@@ -186,6 +218,11 @@ function resetStudioForNewTask() {
 async function handleFileUpload(fileList, targetTool) {
     if (!targetTool) targetTool = 'merge';
     if (!state.currentTool) openTool(targetTool);
+
+    if (state.currentTool === 'game-cards-a3' || targetTool === 'game-cards-a3') {
+        await handleCardBatchUpload({ files: fileList });
+        return;
+    }
 
     state.rawFiles = Array.from(fileList);
 
@@ -652,6 +689,79 @@ function renderDynamicToolOptions(toolKey) {
                         <option value="deu">German</option>
                         <option value="spa">Spanish</option>
                     </select>
+                </div>
+            `;
+            break;
+
+        case 'game-cards-a3':
+            container.innerHTML = `
+                <div class="config-group">
+                    <label class="config-label">Dizilim Sırası (Placement Order)</label>
+                    <select id="cardGridOrderSelect" class="config-select" onchange="updateCardSheetGridOrder(this.value)">
+                        <option value="col_first" selected>Sütun Boyunca (Aşağı Doğru - Referans Gibi)</option>
+                        <option value="row_first">Satır Boyunca (Soldan Sağa)</option>
+                    </select>
+                    <span class="config-hint">Referans görseldeki gibi kartları ilk sütunu doldurarak dizmeye başlar.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Doldurma Modu (Slot Fill Mode)</label>
+                    <select id="cardFillModeSelect" class="config-select" onchange="updateCardSheetFillMode(this.value)">
+                        <option value="uploaded_only" selected>Sadece Yüklenenleri Yerleştir (Kalanlar Boş Şablon)</option>
+                        <option value="repeat">18 Yuvayı Doldur (Döngüsel Tekrarla)</option>
+                    </select>
+                    <span class="config-hint">Referans görsel gibi boş yuvalar şablon kutusu olarak kalır veya 18 yuvaya tamamlanır.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Kart Döndürme (Rotation)</label>
+                    <select id="cardRotationSelect" class="config-select" onchange="updateCardSheetRotation(this.value)">
+                        <option value="ccw90" selected>90° Sola Döndür (Referans - Başlık Solda)</option>
+                        <option value="cw90">90° Sağa Döndür (Başlık Sağda)</option>
+                        <option value="none">Döndürme (Görsel Zaten Yatay)</option>
+                        <option value="auto">Otomatik (Dikey ise yataya çevir)</option>
+                    </select>
+                    <span class="config-hint">Dikey kartlar A3 kağıdına yatay (8.6cm x 5.9cm) olarak yerleştirilir.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Kesim Kılavuzları (Crop Marks)</label>
+                    <select id="cardCropMarksSelect" class="config-select">
+                        <option value="corners" selected>Köşe Kesim Çizgileri (Matbaa Standart)</option>
+                        <option value="border">İnce Çerçeve Kılavuzu</option>
+                        <option value="none">Kılavuzsuz (Düz)</option>
+                    </select>
+                    <span class="config-hint">Giyotinle kesim için köşelere hassas kesim çizgileri ekler.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Boş Yuva Rengi</label>
+                    <select id="cardEmptyColorSelect" class="config-select" onchange="updateCardSheetEmptyColor(this.value)">
+                        <option value="black" selected>Siyah Şablon (Referanstaki Gibi)</option>
+                        <option value="gray">Koyu Gri</option>
+                        <option value="white">Beyaz (Mürekkep Tasarrufu)</option>
+                    </select>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Çıktı Formatı</label>
+                    <select id="cardExportFormatSelect" class="config-select">
+                        <option value="png" selected>PNG Resim (400 DPI - Matbaa Tavsiyeli)</option>
+                        <option value="pdf">PDF Belge (A3 - Vektör/Baskı Standardı)</option>
+                        <option value="jpeg">JPEG Resim (400 DPI - %100 Kalite)</option>
+                    </select>
+                </div>
+
+                <div class="config-group" style="background: rgba(99, 102, 241, 0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #4338ca; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-info"></i> Matbaa Baskı Parametreleri
+                    </div>
+                    <div style="font-size: 0.75rem; color: #475569; line-height: 1.5;">
+                        • <strong>Kağıt:</strong> Standart A3 (297 × 420 mm)<br>
+                        • <strong>Yuva Sayısı:</strong> 18 Kart (3 Sütun × 6 Satır)<br>
+                        • <strong>Kart Ebatı:</strong> 5.9 cm × 8.6 cm (Yatay: 86 × 59 mm)<br>
+                        • <strong>Çözünürlük:</strong> 400 DPI (4677 × 6614 px)
+                    </div>
                 </div>
             `;
             break;
@@ -1331,6 +1441,101 @@ async function executeCurrentTool() {
     document.getElementById('btnProcessAction').style.display = 'none';
     document.getElementById('processProgressBar').style.display = 'block';
 
+    if (action === 'game-cards-a3') {
+        const slots = state.cardSheetSlots || [];
+        const validCards = slots.filter(item => item && item.file);
+
+        if (validCards.length === 0) {
+            alert('Lütfen en az 1 oyun kartı görseli seçin.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
+            return;
+        }
+
+        const fillMode = document.getElementById('cardFillModeSelect') ? document.getElementById('cardFillModeSelect').value : 'uploaded_only';
+        const rotation = document.getElementById('cardRotationSelect') ? document.getElementById('cardRotationSelect').value : 'ccw90';
+        const emptyColor = document.getElementById('cardEmptyColorSelect') ? document.getElementById('cardEmptyColorSelect').value : 'black';
+        const cropMarks = document.getElementById('cardCropMarksSelect') ? document.getElementById('cardCropMarksSelect').value : 'corners';
+        const exportFormat = document.getElementById('cardExportFormatSelect') ? document.getElementById('cardExportFormatSelect').value : 'png';
+        const gridOrder = document.getElementById('cardGridOrderSelect') ? document.getElementById('cardGridOrderSelect').value : 'col_first';
+
+        formData.append('fill_mode', fillMode);
+        formData.append('rotation', rotation);
+        formData.append('empty_color', emptyColor);
+        formData.append('crop_marks', cropMarks);
+        formData.append('export_format', exportFormat);
+        formData.append('grid_order', gridOrder);
+
+        validCards.forEach(item => {
+            formData.append('images', item.file);
+        });
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const ext = exportFormat === 'pdf' ? 'pdf' : (exportFormat === 'jpeg' ? 'jpg' : 'png');
+        const defaultFilename = `MrGrimPDF_OyunKarti_A3_400DPI_${dateStr}.${ext}`;
+        formData.append('custom_name', defaultFilename);
+
+        const totalSize = validCards.reduce((acc, c) => acc + (c.file ? c.file.size : 0), 0);
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // Direct browser generation for large uploads on Vercel to avoid 4.5MB serverless limits
+        if (!isLocal && totalSize > 4 * 1024 * 1024 && exportFormat !== 'pdf') {
+            try {
+                const blob = await generateCardSheetInBrowser({
+                    validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder, filename: defaultFilename
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: defaultFilename
+                });
+                addSessionHistory(action, defaultFilename, blob.size, blobUrl);
+                return;
+            } catch (bErr) {
+                console.warn('Browser generation fallback exception:', bErr);
+            }
+        }
+
+        try {
+            const res = await fetch('/api/process/game-cards-a3', {
+                method: 'POST',
+                body: formData
+            });
+            if (!res.ok) {
+                throw new Error(`Server returned ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
+                showSuccessResult(data);
+                addSessionHistory(action, data.filename, data.size, data.download_url);
+            } else {
+                throw new Error(data.error || 'İşlem başarısız');
+            }
+        } catch (err) {
+            console.warn('Server generation failed, attempting browser generation fallback:', err);
+            try {
+                const blob = await generateCardSheetInBrowser({
+                    validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder, filename: defaultFilename
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: defaultFilename
+                });
+                addSessionHistory(action, defaultFilename, blob.size, blobUrl);
+            } catch (fallbackErr) {
+                alert('İşlem sırasında hata oluştu: ' + (err.message || fallbackErr.message));
+                document.getElementById('btnProcessAction').style.display = 'block';
+                document.getElementById('processProgressBar').style.display = 'none';
+            }
+        }
+        return;
+    }
+
     if (action === 'create-pdf') {
         const title = (document.getElementById('createDocTitleInput') ? document.getElementById('createDocTitleInput').value : '') || '';
         const content = (document.getElementById('createDocContentInput') ? document.getElementById('createDocContentInput').value : '') || '';
@@ -1717,5 +1922,381 @@ function renderHistoryList() {
             </a>
         `;
         list.appendChild(card);
+    });
+}
+
+/* ==========================================================================
+   GAME CARD A3 PRINT SHEET STUDIO (18 SLOTS - 400 DPI)
+   ========================================================================== */
+state.cardSheetSlots = new Array(18).fill(null);
+state.cardSheetActiveSlot = null;
+state.cardSheetRotation = 'ccw90';
+state.cardSheetEmptyColor = 'black';
+state.cardSheetGridOrder = 'col_first';
+
+function initCardSheetStudio() {
+    if (!state.cardSheetSlots || state.cardSheetSlots.length !== 18) {
+        state.cardSheetSlots = new Array(18).fill(null);
+    }
+    renderCardSheetGrid();
+}
+
+function updateCardSheetGridOrder(order) {
+    state.cardSheetGridOrder = order;
+    renderCardSheetGrid();
+}
+
+function renderCardSheetGrid() {
+    const grid = document.getElementById('a3SlotsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    grid.classList.toggle('col-flow', state.cardSheetGridOrder !== 'row_first');
+
+    const emptyColor = state.cardSheetEmptyColor || 'black';
+    let filledCount = 0;
+
+    for (let i = 0; i < 18; i++) {
+        const item = state.cardSheetSlots[i];
+        const slotEl = document.createElement('div');
+        slotEl.className = 'a3-card-slot' + (item ? ' has-card' : '') + (emptyColor === 'white' && !item ? ' slot-white-bg' : '');
+        slotEl.setAttribute('data-slot-idx', i);
+
+        // Slot number badge (1 to 18)
+        const numBadge = document.createElement('span');
+        numBadge.className = 'a3-card-slot-num';
+        numBadge.textContent = `${i + 1}`;
+        slotEl.appendChild(numBadge);
+
+        if (item && item.dataUrl) {
+            filledCount++;
+            const img = document.createElement('img');
+            img.src = item.dataUrl;
+            img.className = 'a3-card-slot-img';
+            img.alt = `Kart ${i + 1}`;
+            slotEl.appendChild(img);
+
+            // Action buttons on hover: Replace and Delete
+            const actions = document.createElement('div');
+            actions.className = 'a3-card-slot-actions';
+
+            const btnReplace = document.createElement('button');
+            btnReplace.type = 'button';
+            btnReplace.className = 'btn-slot-action btn-replace';
+            btnReplace.title = 'Kartı Değiştir';
+            btnReplace.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
+            btnReplace.onclick = (e) => {
+                e.stopPropagation();
+                handleSingleSlotClick(i);
+            };
+            actions.appendChild(btnReplace);
+
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn-slot-action';
+            btnDel.title = 'Kartı Sil';
+            btnDel.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            btnDel.onclick = (e) => {
+                e.stopPropagation();
+                removeCardSlot(i);
+            };
+            actions.appendChild(btnDel);
+
+            slotEl.appendChild(actions);
+        } else {
+            // Empty placeholder box
+            const hint = document.createElement('div');
+            hint.className = 'a3-card-slot-empty-hint';
+            hint.innerHTML = '<i class="fa-solid fa-plus text-xs"></i><span>Kart ' + (i + 1) + '</span>';
+            slotEl.appendChild(hint);
+
+            slotEl.onclick = () => handleSingleSlotClick(i);
+        }
+
+        grid.appendChild(slotEl);
+    }
+
+    // Update count badge
+    const badge = document.getElementById('cardSheetCountBadge');
+    if (badge) {
+        badge.textContent = `${filledCount} / 18 Kart Yüklendi`;
+    }
+
+    const fillBtn = document.getElementById('btnFillAllCardSlots');
+    if (fillBtn) {
+        fillBtn.style.display = (filledCount > 0 && filledCount < 18) ? 'inline-flex' : 'none';
+    }
+}
+
+function generateRotatedThumbnail(file, rotation) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const w = img.naturalWidth;
+                const h = img.naturalHeight;
+
+                const maxDim = 500;
+                let scale = 1;
+                if (Math.max(w, h) > maxDim) {
+                    scale = maxDim / Math.max(w, h);
+                }
+                const sw = Math.round(w * scale);
+                const sh = Math.round(h * scale);
+
+                if (rotation === 'ccw90') {
+                    canvas.width = sh;
+                    canvas.height = sw;
+                    ctx.translate(0, sw);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                } else if (rotation === 'cw90') {
+                    canvas.width = sh;
+                    canvas.height = sw;
+                    ctx.translate(sh, 0);
+                    ctx.rotate(Math.PI / 2);
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                } else if (rotation === 'auto' && h > w) {
+                    canvas.width = sh;
+                    canvas.height = sw;
+                    ctx.translate(0, sw);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                } else {
+                    canvas.width = sw;
+                    canvas.height = sh;
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                }
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => resolve(e.target.result);
+            img.src = e.target.result;
+        };
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+    });
+}
+
+async function updateCardSheetRotation(rot) {
+    state.cardSheetRotation = rot;
+    for (let i = 0; i < 18; i++) {
+        if (state.cardSheetSlots[i] && state.cardSheetSlots[i].file) {
+            state.cardSheetSlots[i].dataUrl = await generateRotatedThumbnail(state.cardSheetSlots[i].file, rot);
+        }
+    }
+    renderCardSheetGrid();
+}
+
+function updateCardSheetEmptyColor(color) {
+    state.cardSheetEmptyColor = color;
+    renderCardSheetGrid();
+}
+
+function updateCardSheetFillMode(mode) {
+    state.cardSheetFillMode = mode;
+}
+
+async function handleCardBatchUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    const files = Array.from(input.files);
+    const rotation = state.cardSheetRotation || 'ccw90';
+
+    let firstEmpty = state.cardSheetSlots.findIndex(s => !s);
+    let targetIdx = firstEmpty !== -1 ? firstEmpty : 0;
+
+    for (let i = 0; i < files.length && targetIdx < 18; i++) {
+        const file = files[i];
+        const dataUrl = await generateRotatedThumbnail(file, rotation);
+        state.cardSheetSlots[targetIdx] = {
+            file: file,
+            dataUrl: dataUrl,
+            name: file.name
+        };
+        targetIdx++;
+    }
+
+    input.value = '';
+    renderCardSheetGrid();
+}
+
+function handleSingleSlotClick(slotIndex) {
+    state.cardSheetActiveSlot = slotIndex;
+    const slotInput = document.getElementById('cardSheetSlotInput');
+    if (slotInput) slotInput.click();
+}
+
+async function handleSingleSlotSelected(input) {
+    if (!input.files || input.files.length === 0) return;
+    const slotIdx = state.cardSheetActiveSlot;
+    if (slotIdx === null || slotIdx < 0 || slotIdx >= 18) return;
+
+    const file = input.files[0];
+    const rotation = state.cardSheetRotation || 'ccw90';
+    const dataUrl = await generateRotatedThumbnail(file, rotation);
+
+    state.cardSheetSlots[slotIdx] = {
+        file: file,
+        dataUrl: dataUrl,
+        name: file.name
+    };
+
+    input.value = '';
+    renderCardSheetGrid();
+}
+
+function removeCardSlot(slotIndex) {
+    if (slotIndex >= 0 && slotIndex < 18) {
+        state.cardSheetSlots[slotIndex] = null;
+        renderCardSheetGrid();
+    }
+}
+
+function fillAllSlotsWithCards() {
+    const valid = state.cardSheetSlots.filter(s => s && s.file);
+    if (valid.length === 0) {
+        alert('Lütfen önce en az bir kart yükleyin.');
+        return;
+    }
+    for (let i = 0; i < 18; i++) {
+        const source = valid[i % valid.length];
+        state.cardSheetSlots[i] = {
+            file: source.file,
+            dataUrl: source.dataUrl,
+            name: source.name
+        };
+    }
+    renderCardSheetGrid();
+}
+
+function clearCardSlots() {
+    state.cardSheetSlots = new Array(18).fill(null);
+    state.cardSheetActiveSlot = null;
+    renderCardSheetGrid();
+}
+
+async function generateCardSheetInBrowser(options) {
+    const { validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder } = options;
+    const canvas = document.createElement('canvas');
+    canvas.width = 4677;
+    canvas.height = 6614;
+    const ctx = canvas.getContext('2d');
+
+    // White A3 paper background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 4677, 6614);
+
+    const cardW = 1354;
+    const cardH = 929;
+    const gapX = 39;
+    const gapY = 39;
+    const marginX = 268;
+    const marginY = 422;
+
+    const slots = [];
+    if (gridOrder === 'col_first') {
+        for (let col = 0; col < 3; col++) {
+            for (let row = 0; row < 6; row++) {
+                slots.push({
+                    x: marginX + col * (cardW + gapX),
+                    y: marginY + row * (cardH + gapY)
+                });
+            }
+        }
+    } else {
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 3; col++) {
+                slots.push({
+                    x: marginX + col * (cardW + gapX),
+                    y: marginY + row * (cardH + gapY)
+                });
+            }
+        }
+    }
+
+    const slotItems = new Array(18).fill(null);
+    if (fillMode === 'repeat') {
+        for (let i = 0; i < 18; i++) {
+            slotItems[i] = validCards[i % validCards.length];
+        }
+    } else {
+        for (let i = 0; i < Math.min(validCards.length, 18); i++) {
+            slotItems[i] = validCards[i];
+        }
+    }
+
+    const emptyFillStyle = emptyColor === 'white' ? '#ffffff' : (emptyColor === 'gray' ? '#282c34' : '#121212');
+
+    for (let i = 0; i < 18; i++) {
+        const slot = slots[i];
+        const card = slotItems[i];
+
+        if (card && card.file) {
+            await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(slot.x, slot.y, cardW, cardH);
+                    ctx.clip();
+
+                    if (rotation === 'ccw90') {
+                        ctx.translate(slot.x, slot.y + cardH);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
+                    } else if (rotation === 'cw90') {
+                        ctx.translate(slot.x + cardW, slot.y);
+                        ctx.rotate(Math.PI / 2);
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
+                    } else if (rotation === 'auto' && img.naturalHeight > img.naturalWidth) {
+                        ctx.translate(slot.x, slot.y + cardH);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
+                    } else {
+                        ctx.drawImage(img, slot.x, slot.y, cardW, cardH);
+                    }
+                    ctx.restore();
+                    resolve();
+                };
+                img.onerror = () => resolve();
+                img.src = card.dataUrl;
+            });
+        } else {
+            ctx.fillStyle = emptyFillStyle;
+            ctx.fillRect(slot.x, slot.y, cardW, cardH);
+            ctx.strokeStyle = emptyColor === 'white' ? '#cbd5e1' : '#555555';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(slot.x, slot.y, cardW, cardH);
+        }
+
+        if (cropMarks === 'corners') {
+            const markLen = 25;
+            const markGap = 5;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath(); ctx.moveTo(slot.x - markGap - markLen, slot.y); ctx.lineTo(slot.x - markGap, slot.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.x, slot.y - markGap - markLen); ctx.lineTo(slot.x, slot.y - markGap); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.x + cardW + markGap, slot.y); ctx.lineTo(slot.x + cardW + markGap + markLen, slot.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.x + cardW, slot.y - markGap - markLen); ctx.lineTo(slot.x + cardW, slot.y - markGap); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.x - markGap - markLen, slot.y + cardH); ctx.lineTo(slot.x - markGap, slot.y + cardH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.x, slot.y + cardH + markGap); ctx.lineTo(slot.x, slot.y + cardH + markGap + markLen); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.x + cardW + markGap, slot.y + cardH); ctx.lineTo(slot.x + cardW + markGap + markLen, slot.y + cardH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.x + cardW, slot.y + cardH + markGap); ctx.lineTo(slot.x + cardW, slot.y + cardH + markGap + markLen); ctx.stroke();
+        } else if (cropMarks === 'border') {
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(slot.x, slot.y, cardW, cardH);
+        }
+    }
+
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/png');
     });
 }

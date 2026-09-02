@@ -153,6 +153,7 @@
                         <div class="dropdown-category">
                             <span class="cat-title"><i class="fa-solid fa-file-circle-plus"></i> Create & Build</span>
                             <a href="#" onclick="openTool('create-pdf')"><i class="fa-solid fa-plus text-pink-500"></i> Create New PDF</a>
+                            <a href="#" onclick="openTool('game-cards-a3')"><i class="fa-solid fa-layer-group text-amber-500"></i> Game Card Sheet (A3)</a>
                             <a href="#" onclick="openTool('images-to-pdf')"><i class="fa-solid fa-images text-indigo-500"></i> Images to PDF</a>
                             <a href="#" onclick="openTool('merge')"><i class="fa-solid fa-object-group text-cyan-500"></i> Merge PDFs</a>
                         </div>
@@ -503,6 +504,16 @@
                         <h3 class="tool-title">Compare PDFs</h3>
                         <p class="tool-desc">Analyze two PDF revisions and generate a visual difference report side-by-side.</p>
                     </div>
+
+                    <!-- GAME CARDS A3 MATBAA SHEET TOOL (EN SONA EKLENEN ÖZEL ARAÇ) -->
+                    <div class="glass-tool-card glow-amber-pink" data-category="create convert organize" onclick="openTool('game-cards-a3')">
+                        <div class="card-glow-corner"></div>
+                        <div class="tool-icon-wrap" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white;">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <h3 class="tool-title">Oyun Kartı Matbaa Şablonu (A3)</h3>
+                        <p class="tool-desc">A3 kağıdına 18 adet 5.9x8.6cm oyun kartını 400 DPI matbaa standartlarında yatay dizin ve yüksek kalitede indirin.</p>
+                    </div>
                 </div>
             </section>
 
@@ -707,6 +718,45 @@
                             <div id="createTextView" class="create-text-view" style="display: none; flex-direction: column; gap: 12px; height: 100%;">
                                 <input type="text" id="createDocTitleInput" class="config-input" style="font-size: 1.1rem; font-weight: 700; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 12px 16px; width: 100%;" placeholder="Doküman Başlığı (Örn: Raporum / Notlarım)">
                                 <textarea id="createDocContentInput" class="config-input" style="width: 100%; height: 230px; resize: vertical; font-size: 0.95rem; line-height: 1.6; background: #ffffff; border-radius: 14px; border: 1.5px solid #cbd5e1; padding: 14px; font-family: inherit;" placeholder="Metninizi veya notlarınızı buraya yazın veya yapıştırın..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- STAGE: GAME CARDS A3 PRINT SHEET STUDIO -->
+                        <div class="stage-card-sheet-container" id="stageCardSheetContainer" style="display: none; width: 100%; height: 100%; flex-direction: column; gap: 10px; padding: 4px; overflow-y: auto;">
+                            <!-- Header / Control Toolbar -->
+                            <div class="card-sheet-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span id="cardSheetCountBadge" class="create-page-badge" style="background: linear-gradient(135deg, #4f46e5, #ec4899); color: white; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.8rem;">
+                                        0 / 18 Kart Yüklendi
+                                    </span>
+                                    <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">
+                                        (A3 Kağıt • 3 Sütun × 6 Satır • 5.9cm × 8.6cm • 400 DPI)
+                                    </span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <button type="button" class="btn-tool-sm" onclick="document.getElementById('cardSheetBatchInput').click()" style="background: #4f46e5; color: white; font-weight: 600;">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> Toplu Kart Seç (1-18)
+                                    </button>
+                                    <button type="button" class="btn-tool-sm" id="btnFillAllCardSlots" onclick="fillAllSlotsWithCards()" title="Yüklenen kartları 18 yuvaya döngüsel olarak doldurur" style="display: none;">
+                                        <i class="fa-solid fa-clone"></i> 18 Yuvayı Tamamla
+                                    </button>
+                                    <button type="button" class="btn-tool-sm" onclick="clearCardSlots()" title="Tüm yuvaları temizler">
+                                        <i class="fa-solid fa-trash"></i> Temizle
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Hidden inputs for file uploads -->
+                            <input type="file" id="cardSheetBatchInput" multiple accept="image/*,.png,.jpg,.jpeg,.webp" style="display: none;" onchange="handleCardBatchUpload(this)">
+                            <input type="file" id="cardSheetSlotInput" accept="image/*,.png,.jpg,.jpeg,.webp" style="display: none;" onchange="handleSingleSlotSelected(this)">
+
+                            <!-- A3 Paper Sheet Simulation Container -->
+                            <div class="a3-sheet-preview-wrapper">
+                                <div class="a3-paper-sheet" id="a3PaperSheet">
+                                    <div class="a3-slots-grid" id="a3SlotsGrid">
+                                        <!-- Rendered dynamically by JS -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
