@@ -1427,10 +1427,10 @@ function updateDownloadFilename(newVal) {
     const dlBtn = document.getElementById('downloadResultBtn');
     if (dlBtn) {
         let clean = newVal.trim();
-        if (clean && !clean.toLowerCase().endsWith('.pdf')) {
+        if (state.currentTool !== 'game-cards-a3' && clean && !clean.includes('.')) {
             clean += '.pdf';
         }
-        dlBtn.download = clean || 'MrGrimPDF_Document.pdf';
+        dlBtn.download = clean || 'MrGrimPDF_Document';
     }
 }
 
@@ -1851,9 +1851,33 @@ function showSuccessResult(data) {
     document.getElementById('processProgressBar').style.display = 'none';
     document.getElementById('studioResultState').style.display = 'block';
 
+    const isCardSheet = state.currentTool === 'game-cards-a3';
+    const isImage = data.filename && (data.filename.endsWith('.png') || data.filename.endsWith('.jpg') || data.filename.endsWith('.jpeg'));
+
+    const heading = document.getElementById('resultStateHeading');
+    if (heading) {
+        if (isCardSheet) {
+            heading.textContent = 'Şablon Hazır! / Template Ready!';
+        } else if (isImage) {
+            heading.textContent = 'Görsel Hazır! / Image Ready!';
+        } else {
+            heading.textContent = 'Dosyanız Hazır! / Document Ready!';
+        }
+    }
+
     const dlBtn = document.getElementById('downloadResultBtn');
     dlBtn.href = data.download_url;
     dlBtn.download = data.filename;
+
+    const dlBtnText = document.getElementById('downloadBtnText');
+    if (dlBtnText) {
+        dlBtnText.textContent = 'İndir';
+    }
+
+    const resetBtnText = document.getElementById('resetTaskBtnText');
+    if (resetBtnText) {
+        resetBtnText.textContent = isCardSheet ? 'Yeni Şablon Oluştur' : 'Yeni İşlem';
+    }
 
     const nameInput = document.getElementById('resultFilenameInput');
     if (nameInput) {
@@ -2232,35 +2256,54 @@ async function generateCardSheetInBrowser(options) {
         const slot = slots[i];
         const card = slotItems[i];
 
-        if (card && card.file) {
+        if (card) {
             await new Promise((resolve) => {
                 const img = new Image();
+                let blobUrl = null;
                 img.onload = () => {
                     ctx.save();
                     ctx.beginPath();
                     ctx.rect(slot.x, slot.y, cardW, cardH);
                     ctx.clip();
 
-                    if (rotation === 'ccw90') {
-                        ctx.translate(slot.x, slot.y + cardH);
-                        ctx.rotate(-Math.PI / 2);
-                        ctx.drawImage(img, 0, 0, cardH, cardW);
-                    } else if (rotation === 'cw90') {
-                        ctx.translate(slot.x + cardW, slot.y);
-                        ctx.rotate(Math.PI / 2);
-                        ctx.drawImage(img, 0, 0, cardH, cardW);
-                    } else if (rotation === 'auto' && img.naturalHeight > img.naturalWidth) {
-                        ctx.translate(slot.x, slot.y + cardH);
-                        ctx.rotate(-Math.PI / 2);
-                        ctx.drawImage(img, 0, 0, cardH, cardW);
+                    if (blobUrl) {
+                        // Original unrotated high-resolution card: rotate once
+                        if (rotation === 'ccw90') {
+                            ctx.translate(slot.x, slot.y + cardH);
+                            ctx.rotate(-Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else if (rotation === 'cw90') {
+                            ctx.translate(slot.x + cardW, slot.y);
+                            ctx.rotate(Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else if (rotation === 'auto' && img.naturalHeight > img.naturalWidth) {
+                            ctx.translate(slot.x, slot.y + cardH);
+                            ctx.rotate(-Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else {
+                            ctx.drawImage(img, slot.x, slot.y, cardW, cardH);
+                        }
                     } else {
+                        // Thumbnail is already rotated in preview: draw as-is
                         ctx.drawImage(img, slot.x, slot.y, cardW, cardH);
                     }
                     ctx.restore();
+                    if (blobUrl) URL.revokeObjectURL(blobUrl);
                     resolve();
                 };
-                img.onerror = () => resolve();
-                img.src = card.dataUrl;
+                img.onerror = () => {
+                    if (blobUrl) URL.revokeObjectURL(blobUrl);
+                    resolve();
+                };
+
+                if (card.file) {
+                    blobUrl = URL.createObjectURL(card.file);
+                    img.src = blobUrl;
+                } else if (card.dataUrl) {
+                    img.src = card.dataUrl;
+                } else {
+                    resolve();
+                }
             });
         } else {
             ctx.fillStyle = emptyFillStyle;
@@ -2294,9 +2337,13 @@ async function generateCardSheetInBrowser(options) {
         }
     }
 
+    const isJpeg = (options.exportFormat === 'jpeg' || options.exportFormat === 'jpg' || (options.filename && options.filename.endsWith('.jpg')));
+    const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
+    const quality = isJpeg ? 1.0 : undefined;
+
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             resolve(blob);
-        }, 'image/png');
+        }, mimeType, quality);
     });
 }

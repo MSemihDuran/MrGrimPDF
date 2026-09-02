@@ -779,8 +779,8 @@
                             <div class="result-icon-badge">
                                 <i class="fa-solid fa-circle-check"></i>
                             </div>
-                            <h3>PDF Hazır! / Document Ready!</h3>
-                            <p id="resultDetailsText">Dosyanız başarıyla oluşturuldu.</p>
+                            <h3 id="resultStateHeading">Dosyanız Hazır! / File Ready!</h3>
+                            <p id="resultDetailsText">İşleminiz başarıyla tamamlandı.</p>
                             
                             <!-- EDITABLE FILENAME WITH EDIT ICON (Kullanıcı indirmeden önce ismi değiştirebilir) -->
                             <div class="filename-edit-box" style="margin-top: 16px; text-align: left;">
@@ -794,10 +794,10 @@
                             </div>
 
                             <a href="#" id="downloadResultBtn" class="btn-gradient btn-block mt-4" download>
-                                <i class="fa-solid fa-download"></i> PDF'i İndir
+                                <i class="fa-solid fa-download"></i> <span id="downloadBtnText">İndir</span>
                             </a>
-                            <button class="btn-outline-glass btn-block mt-2" onclick="resetStudioForNewTask()">
-                                <i class="fa-solid fa-rotate-left"></i> Yeni PDF Oluştur
+                            <button class="btn-outline-glass btn-block mt-2" id="resetTaskBtn" onclick="resetStudioForNewTask()">
+                                <i class="fa-solid fa-rotate-left"></i> <span id="resetTaskBtnText">Yeni İşlem</span>
                             </button>
                         </div>
                     </div>
