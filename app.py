@@ -574,7 +574,7 @@ def process_action(action):
             fill_mode = data.get('fill_mode', 'uploaded_only')
             rotation = data.get('rotation', 'ccw90')
             empty_color = data.get('empty_color', 'black')
-            crop_marks = data.get('crop_marks', 'corners')
+            crop_marks = data.get('crop_marks', 'none')
             export_format = data.get('export_format', 'png').lower()
             grid_order = data.get('grid_order', 'col_first')
             try:

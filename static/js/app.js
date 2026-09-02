@@ -725,13 +725,13 @@ function renderDynamicToolOptions(toolKey) {
                 </div>
 
                 <div class="config-group">
-                    <label class="config-label">Kesim Kılavuzları (Crop Marks)</label>
-                    <select id="cardCropMarksSelect" class="config-select">
-                        <option value="corners" selected>Köşe Kesim Çizgileri (Matbaa Standart)</option>
-                        <option value="border">İnce Çerçeve Kılavuzu</option>
-                        <option value="none">Kılavuzsuz (Düz)</option>
+                    <label class="config-label">Kesim / Kılavuz Çizgileri (İsteğe Bağlı)</label>
+                    <select id="cardCropMarksSelect" class="config-select" onchange="syncCardCropMarks(this.value)">
+                        <option value="none" selected>Kılavuz Çizgisi Yok (Düz / Sade)</option>
+                        <option value="corners">Köşe Kesim Çizgileri (Matbaa Giyotin)</option>
+                        <option value="border">İnce Çerçeve Kılavuz Çizgisi</option>
                     </select>
-                    <span class="config-hint">Giyotinle kesim için köşelere hassas kesim çizgileri ekler.</span>
+                    <span class="config-hint">İsteğe bağlı olarak matbaa kesimi için kılavuz çizgileri ekler.</span>
                 </div>
 
                 <div class="config-group">
@@ -1455,7 +1455,7 @@ async function executeCurrentTool() {
         const fillMode = document.getElementById('cardFillModeSelect') ? document.getElementById('cardFillModeSelect').value : 'uploaded_only';
         const rotation = document.getElementById('cardRotationSelect') ? document.getElementById('cardRotationSelect').value : 'ccw90';
         const emptyColor = document.getElementById('cardEmptyColorSelect') ? document.getElementById('cardEmptyColorSelect').value : 'black';
-        const cropMarks = document.getElementById('cardCropMarksSelect') ? document.getElementById('cardCropMarksSelect').value : 'corners';
+        const cropMarks = document.getElementById('cardCropMarksSelect') ? document.getElementById('cardCropMarksSelect').value : 'none';
         const exportFormat = document.getElementById('cardExportFormatSelect') ? document.getElementById('cardExportFormatSelect').value : 'png';
         const gridOrder = document.getElementById('cardGridOrderSelect') ? document.getElementById('cardGridOrderSelect').value : 'col_first';
 
@@ -2342,8 +2342,107 @@ async function generateCardSheetInBrowser(options) {
     const quality = isJpeg ? 1.0 : undefined;
 
     return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-            resolve(blob);
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                resolve(blob);
+                return;
+            }
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                let finalBuffer;
+                if (isJpeg) {
+                    finalBuffer = setJpegDpi(arrayBuffer, 400);
+                } else {
+                    finalBuffer = setPngDpi(arrayBuffer, 400);
+                }
+                resolve(new Blob([finalBuffer], { type: mimeType }));
+            } catch (dpiErr) {
+                console.warn('Could not inject 400 DPI metadata, returning raw blob:', dpiErr);
+                resolve(blob);
+            }
         }, mimeType, quality);
     });
+}
+
+function toggleCardGuideLines(checked) {
+    const sel = document.getElementById('cardCropMarksSelect');
+    if (sel) {
+        sel.value = checked ? 'corners' : 'none';
+    }
+}
+
+function syncCardCropMarks(val) {
+    const toggle = document.getElementById('cardGuideLinesToggle');
+    if (toggle) {
+        toggle.checked = val !== 'none';
+    }
+}
+
+function setPngDpi(buffer, dpi = 400) {
+    const view = new DataView(buffer);
+    const ppm = Math.round(dpi / 0.0254);
+
+    if (view.getUint32(0) !== 0x89504E47) return buffer;
+
+    const crcTable = [];
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        crcTable[n] = c;
+    }
+    function crc32(buf, start, len) {
+        let c = 0 ^ (-1);
+        for (let i = start; i < start + len; i++) {
+            c = (c >>> 8) ^ crcTable[(c ^ buf[i]) & 0xFF];
+        }
+        return (c ^ (-1)) >>> 0;
+    }
+
+    const physChunk = new Uint8Array(21);
+    const physView = new DataView(physChunk.buffer);
+    physView.setUint32(0, 9);
+    physChunk[4] = 0x70; physChunk[5] = 0x48; physChunk[6] = 0x59; physChunk[7] = 0x73;
+    physView.setUint32(8, ppm);
+    physView.setUint32(12, ppm);
+    physChunk[16] = 1;
+    const crc = crc32(physChunk, 4, 13);
+    physView.setUint32(17, crc);
+
+    const newBuf = new Uint8Array(buffer.byteLength + 21);
+    newBuf.set(new Uint8Array(buffer.slice(0, 33)), 0);
+    newBuf.set(physChunk, 33);
+    newBuf.set(new Uint8Array(buffer.slice(33)), 33 + 21);
+    return newBuf.buffer;
+}
+
+function setJpegDpi(buffer, dpi = 400) {
+    const uint8 = new Uint8Array(buffer);
+    if (uint8[0] !== 0xFF || uint8[1] !== 0xD8) return buffer;
+
+    if (uint8[2] === 0xFF && uint8[3] === 0xE0) {
+        uint8[13] = 1;
+        uint8[14] = (dpi >> 8) & 0xFF;
+        uint8[15] = dpi & 0xFF;
+        uint8[16] = (dpi >> 8) & 0xFF;
+        uint8[17] = dpi & 0xFF;
+        return buffer;
+    } else {
+        const app0 = new Uint8Array([
+            0xFF, 0xE0,
+            0x00, 0x10,
+            0x4A, 0x46, 0x49, 0x46, 0x00,
+            0x01, 0x01,
+            0x01,
+            (dpi >> 8) & 0xFF, dpi & 0xFF,
+            (dpi >> 8) & 0xFF, dpi & 0xFF,
+            0x00, 0x00
+        ]);
+        const newBuf = new Uint8Array(buffer.byteLength + app0.byteLength);
+        newBuf.set(uint8.slice(0, 2), 0);
+        newBuf.set(app0, 2);
+        newBuf.set(uint8.slice(2), 2 + app0.byteLength);
+        return newBuf.buffer;
+    }
 }

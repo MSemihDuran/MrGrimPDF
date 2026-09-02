@@ -114,7 +114,7 @@ def generate_card_sheet(
     fill_mode="uploaded_only",
     rotation="ccw90",
     empty_color="black",
-    crop_marks="corners",
+    crop_marks="none",
     export_format="png",
     grid_order="col_first"
 ):
