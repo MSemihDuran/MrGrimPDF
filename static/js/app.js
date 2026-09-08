@@ -2256,7 +2256,142 @@ function renderCardSheetGrid() {
     }
 }
 
-function generateRotatedThumbnail(file, rotation) {
+function extractCardSourceRect(img) {
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h || w < 100 || h < 100) {
+        return { sx: 0, sy: 0, sw: w, sh: h };
+    }
+
+    try {
+        const sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width = w;
+        sampleCanvas.height = h;
+        const sCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+        sCtx.drawImage(img, 0, 0, w, h);
+
+        // Check 4 corners for smoky background
+        const pTL = sCtx.getImageData(0, 0, 1, 1).data;
+        const pTR = sCtx.getImageData(w - 1, 0, 1, 1).data;
+        const pBL = sCtx.getImageData(0, h - 1, 1, 1).data;
+        const pBR = sCtx.getImageData(w - 1, h - 1, 1, 1).data;
+
+        for (const c of [pTL, pTR, pBL, pBR]) {
+            const r = c[0], g = c[1], b = c[2];
+            if (!(Math.abs(r - g) < 25 && b >= r - 5 && b > 70 && b < 225)) {
+                return { sx: 0, sy: 0, sw: w, sh: h };
+            }
+        }
+
+        const maxScanX = Math.floor(w * 0.12);
+        const maxScanY = Math.floor(h * 0.12);
+        const yStart = Math.floor(h * 0.3);
+        const yEnd = Math.floor(h * 0.7);
+        const sampleH = yEnd - yStart;
+
+        // 1. Left scan
+        const leftData = sCtx.getImageData(0, yStart, maxScanX, sampleH).data;
+        let minX = 0, minXVal = 999;
+        const colMeans = new Float32Array(maxScanX);
+        for (let x = 0; x < maxScanX; x++) {
+            let sum = 0;
+            for (let y = 0; y < sampleH; y += 2) {
+                const idx = (y * maxScanX + x) * 4;
+                sum += (leftData[idx] + leftData[idx + 1] + leftData[idx + 2]) / 3;
+            }
+            const mean = sum / (sampleH / 2);
+            colMeans[x] = mean;
+            if (mean < minXVal) {
+                minXVal = mean;
+                minX = x;
+            }
+        }
+        let left = minX;
+        while (left < maxScanX && colMeans[left] < minXVal + 20) {
+            left++;
+        }
+
+        // 2. Right scan
+        const rightData = sCtx.getImageData(w - maxScanX, yStart, maxScanX, sampleH).data;
+        let minRx = 0, minRxVal = 999;
+        const rColMeans = new Float32Array(maxScanX);
+        for (let x = 0; x < maxScanX; x++) {
+            let sum = 0;
+            for (let y = 0; y < sampleH; y += 2) {
+                const idx = (y * maxScanX + x) * 4;
+                sum += (rightData[idx] + rightData[idx + 1] + rightData[idx + 2]) / 3;
+            }
+            const mean = sum / (sampleH / 2);
+            rColMeans[x] = mean;
+            if (mean < minRxVal) {
+                minRxVal = mean;
+                minRx = x;
+            }
+        }
+        let right = w - maxScanX + minRx;
+        while (right > w - maxScanX && rColMeans[right - (w - maxScanX)] < minRxVal + 20) {
+            right--;
+        }
+
+        // 3. Top scan
+        const xStart = Math.floor(w * 0.3);
+        const xEnd = Math.floor(w * 0.7);
+        const sampleW = xEnd - xStart;
+        const topData = sCtx.getImageData(xStart, 0, sampleW, maxScanY).data;
+        let minY = 0, minYVal = 999;
+        const rowMeans = new Float32Array(maxScanY);
+        for (let y = 0; y < maxScanY; y++) {
+            let sum = 0;
+            for (let x = 0; x < sampleW; x += 2) {
+                const idx = (y * sampleW + x) * 4;
+                sum += (topData[idx] + topData[idx + 1] + topData[idx + 2]) / 3;
+            }
+            const mean = sum / (sampleW / 2);
+            rowMeans[y] = mean;
+            if (mean < minYVal) {
+                minYVal = mean;
+                minY = y;
+            }
+        }
+        let top = minY;
+        while (top < maxScanY && rowMeans[top] < minYVal + 20) {
+            top++;
+        }
+
+        // 4. Bottom scan
+        const botData = sCtx.getImageData(xStart, h - maxScanY, sampleW, maxScanY).data;
+        let minByVal = 999;
+        let minBy = maxScanY - 1;
+        const bRowMeans = new Float32Array(maxScanY);
+        for (let y = 0; y < maxScanY; y++) {
+            let sum = 0;
+            for (let x = 0; x < sampleW; x += 2) {
+                const idx = (y * sampleW + x) * 4;
+                sum += (botData[idx] + botData[idx + 1] + botData[idx + 2]) / 3;
+            }
+            bRowMeans[y] = sum / (sampleW / 2);
+        }
+        for (let idx = maxScanY - 1; idx >= Math.floor(maxScanY * 0.4); idx--) {
+            if (bRowMeans[idx] < minByVal) {
+                minByVal = bRowMeans[idx];
+                minBy = idx;
+            }
+        }
+        let bottom = h - maxScanY + minBy;
+        while (bottom > h - maxScanY && bRowMeans[bottom - (h - maxScanY)] < minByVal + 20) {
+            bottom--;
+        }
+
+        if (right > left + 100 && bottom > top + 100) {
+            return { sx: left, sy: top, sw: right - left, sh: bottom - top };
+        }
+    } catch (err) {
+        console.warn('Error detecting clean card bounds:', err);
+    }
+    return { sx: 0, sy: 0, sw: w, sh: h };
+}
+
+function generateRotatedThumbnail(file, rotation, cropSmoke = false) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -2264,39 +2399,40 @@ function generateRotatedThumbnail(file, rotation) {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const w = img.naturalWidth;
-                const h = img.naturalHeight;
+                const sRect = cropSmoke ? extractCardSourceRect(img) : { sx: 0, sy: 0, sw: img.naturalWidth, sh: img.naturalHeight };
+                const srcW = sRect.sw;
+                const srcH = sRect.sh;
 
                 const maxDim = 500;
                 let scale = 1;
-                if (Math.max(w, h) > maxDim) {
-                    scale = maxDim / Math.max(w, h);
+                if (Math.max(srcW, srcH) > maxDim) {
+                    scale = maxDim / Math.max(srcW, srcH);
                 }
-                const sw = Math.round(w * scale);
-                const sh = Math.round(h * scale);
+                const sw = Math.round(srcW * scale);
+                const sh = Math.round(srcH * scale);
 
                 if (rotation === 'ccw90') {
                     canvas.width = sh;
                     canvas.height = sw;
                     ctx.translate(0, sw);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.drawImage(img, 0, 0, sw, sh);
+                    ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, sw, sh);
                 } else if (rotation === 'cw90') {
                     canvas.width = sh;
                     canvas.height = sw;
                     ctx.translate(sh, 0);
                     ctx.rotate(Math.PI / 2);
-                    ctx.drawImage(img, 0, 0, sw, sh);
-                } else if (rotation === 'auto' && h > w) {
+                    ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, sw, sh);
+                } else if (rotation === 'auto' && srcH > srcW) {
                     canvas.width = sh;
                     canvas.height = sw;
                     ctx.translate(0, sw);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.drawImage(img, 0, 0, sw, sh);
+                    ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, sw, sh);
                 } else {
                     canvas.width = sw;
                     canvas.height = sh;
-                    ctx.drawImage(img, 0, 0, sw, sh);
+                    ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, sw, sh);
                 }
                 resolve(canvas.toDataURL('image/jpeg', 0.85));
             };
@@ -2672,11 +2808,11 @@ function renderGuillotineMarksSvg50x70(visible = true) {
     // 500mm x 700mm paper coordinates in mm:
     // 7 columns: left margin 8.5mm, cell width 69mm
     // 7 rows: top margin 14.0mm, cell height 96mm
-    // Exact placement matching 77/937 and 72/1297 ratios:
-    const cardXOffset = 69.0 * 77 / 937;
-    const cardYOffset = 96.0 * 72 / 1297;
-    const cardW = 69.0 * 784 / 937;
-    const cardH = 96.0 * 1154 / 1297;
+    // Exact placement matching 88/937 and 82/1297 ratios:
+    const cardXOffset = 69.0 * 88 / 937;
+    const cardYOffset = 96.0 * 82 / 1297;
+    const cardW = 69.0 * 761 / 937;
+    const cardH = 96.0 * 1130 / 1297;
 
     let svgHtml = '';
     const stroke = '#000000';
@@ -2730,8 +2866,13 @@ function updateCardSheet50x70FillMode(val) {
     // Fill mode changed
 }
 
-function updateCardSheet50x70Rotation(val) {
+async function updateCardSheet50x70Rotation(val) {
     state.cardSheet50x70Rotation = val;
+    for (let i = 0; i < 49; i++) {
+        if (state.cardSheet50x70Slots[i] && state.cardSheet50x70Slots[i].file) {
+            state.cardSheet50x70Slots[i].dataUrl = await generateRotatedThumbnail(state.cardSheet50x70Slots[i].file, val, true);
+        }
+    }
     renderCardSheet50x70Grid();
 }
 
@@ -2858,7 +2999,7 @@ async function handleCard50x70BatchUpload(input) {
 
     for (let i = 0; i < files.length && targetIdx < 49; i++) {
         const file = files[i];
-        const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none');
+        const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none', true);
         state.cardSheet50x70Slots[targetIdx] = {
             file: file,
             dataUrl: dataUrl,
@@ -2885,7 +3026,7 @@ async function handleSingleSlotSelected50x70(input) {
     const file = input.files[0];
     if (!file || state.cardSheet50x70ActiveSlot === null) return;
 
-    const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none');
+    const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none', true);
     state.cardSheet50x70Slots[state.cardSheet50x70ActiveSlot] = {
         file: file,
         dataUrl: dataUrl,
@@ -2935,11 +3076,11 @@ async function generateCardSheet50x70InBrowser(options) {
     const cellW = 1087;
     const cellH = 1512;
     // Exact placement matching base card in card_back_50x70.jpg (937 x 1297):
-    // Covers the base card and shadow flawlessly: x=77/937, y=72/1297, w=784/937, h=1154/1297
-    const cardXOffset = Math.round(cellW * 77 / 937); // 89
-    const cardYOffset = Math.round(cellH * 72 / 1297); // 84
-    const cardW = Math.round(cellW * 784 / 937); // 910
-    const cardH = Math.round(cellH * 1154 / 1297); // 1345
+    // Base card coordinates: left=88/937, top=82/1297, width=761/937, height=1130/1297
+    const cardXOffset = Math.round(cellW * 88 / 937); // 102
+    const cardYOffset = Math.round(cellH * 82 / 1297); // 96
+    const cardW = Math.round(cellW * 761 / 937); // 883
+    const cardH = Math.round(cellH * 1130 / 1297); // 1317
     const bleedX = cardXOffset;
     const bleedY = cardYOffset;
     const marginX = 134;
@@ -3032,24 +3173,26 @@ async function generateCardSheet50x70InBrowser(options) {
                     ctx.rect(slot.cardX, slot.cardY, cardW, cardH);
                     ctx.clip();
 
+                    const sRect = extractCardSourceRect(img);
+
                     if (blobUrl) {
                         if (rotation === 'ccw90') {
                             ctx.translate(slot.cardX, slot.cardY + cardH);
                             ctx.rotate(-Math.PI / 2);
-                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                            ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, cardH, cardW);
                         } else if (rotation === 'cw90') {
                             ctx.translate(slot.cardX + cardW, slot.cardY);
                             ctx.rotate(Math.PI / 2);
-                            ctx.drawImage(img, 0, 0, cardH, cardW);
-                        } else if (rotation === 'auto' && img.naturalWidth > img.naturalHeight) {
+                            ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, cardH, cardW);
+                        } else if (rotation === 'auto' && sRect.sw > sRect.sh) {
                             ctx.translate(slot.cardX, slot.cardY + cardH);
                             ctx.rotate(-Math.PI / 2);
-                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                            ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, 0, 0, cardH, cardW);
                         } else {
-                            ctx.drawImage(img, slot.cardX, slot.cardY, cardW, cardH);
+                            ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, slot.cardX, slot.cardY, cardW, cardH);
                         }
                     } else {
-                        ctx.drawImage(img, slot.cardX, slot.cardY, cardW, cardH);
+                        ctx.drawImage(img, sRect.sx, sRect.sy, sRect.sw, sRect.sh, slot.cardX, slot.cardY, cardW, cardH);
                     }
                     ctx.restore();
                     if (blobUrl) URL.revokeObjectURL(blobUrl);
