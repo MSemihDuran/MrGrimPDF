@@ -36,16 +36,14 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     cell_w = mm_to_px(CELL_W_MM, dpi)
     cell_h = mm_to_px(CELL_H_MM, dpi)
 
-    # Exact 5.9cm x 8.6cm card with symmetrical 5.0mm bleed on all sides:
-    # Exact 5.9cm x 8.6cm card with symmetrical 5.0mm bleed on all sides:
-    # 5.0mm bleed: 79 px at 400 DPI
-    # 5.9cm (59.0mm) card width: 929 px at 400 DPI
-    # 8.6cm (86.0mm) card height: 1354 px at 400 DPI
-    # Check: 79 + 929 + 79 = 1087 px (cell_w); 79 + 1354 + 79 = 1512 px (cell_h).
-    card_x_offset = round(BLEED_MM * dpi / 25.4)
-    card_y_offset = round(BLEED_MM * dpi / 25.4)
-    card_w = round(CARD_W_MM * dpi / 25.4)
-    card_h = round(CARD_H_MM * dpi / 25.4)
+    # Exact alignment to cover the base card in genisletilmis kart (937 x 1297):
+    # Base card sits at: x=88, y=82, w=760, h=1129 in 937x1297.
+    # At 400 DPI (1087 x 1512 cell), with 1px bleed overlap:
+    # card_x_offset = 101, card_y_offset = 95, card_w = 884, card_h = 1318
+    card_x_offset = round(cell_w * 101 / 1087)
+    card_y_offset = round(cell_h * 95 / 1512)
+    card_w = round(cell_w * 884 / 1087)
+    card_h = round(cell_h * 1318 / 1512)
 
     # 7 * 69mm = 483mm. Remaining width on 500mm = 17mm.
     total_grid_w = COLS * cell_w
@@ -111,11 +109,37 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     }
 
 
+def _has_cloudy_margin(img):
+    """
+    Detects if an uploaded card image contains a pre-existing cloudy/smoky margin
+    (e.g., cards exported with template borders like 813x1185 or 1696x2474 cards).
+    """
+    try:
+        w, h = img.size
+        ratio = w / float(h)
+        if not (0.60 <= ratio <= 0.75):
+            return False
+        corners = [
+            img.getpixel((2, 2)),
+            img.getpixel((w - 3, 2)),
+            img.getpixel((2, h - 3)),
+            img.getpixel((w - 3, h - 3))
+        ]
+        for r, g, b in corners:
+            # Desaturated cool slate/smoke
+            if abs(r - g) > 25 or abs(g - b) > 55 or abs(r - b) > 55:
+                return False
+            if not (35 <= r <= 200 and 35 <= g <= 200 and 45 <= b <= 220):
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def prepare_card_image(image_path, target_w, target_h, rotation="none"):
     """
-    Loads, scales and optionally rotates any card image to target_w x target_h (5.9 x 8.6 cm).
-    Fits the exact 5.9x8.6 cm boundary without shifting, clipping or extra distortion.
-    For portrait cards (5.9 x 8.6), rotation='none' is default.
+    Loads, crops any pre-existing outer smoky bleed/padding if present,
+    and scales to target_w x target_h with high quality Lanczos resampling.
     """
     with Image.open(image_path) as src_img:
         img = src_img.convert("RGB")
@@ -123,12 +147,22 @@ def prepare_card_image(image_path, target_w, target_h, rotation="none"):
 
         if rotation == "ccw90":
             img = img.transpose(Image.Transpose.ROTATE_90)
+            w, h = img.size
         elif rotation == "cw90":
             img = img.transpose(Image.Transpose.ROTATE_270)
+            w, h = img.size
         elif rotation == "auto":
             # If user uploaded a horizontal image but target is vertical
             if w > h and target_h > target_w:
                 img = img.transpose(Image.Transpose.ROTATE_90)
+                w, h = img.size
+
+        # Crop pre-existing cloudy/smoky padding if present
+        if _has_cloudy_margin(img):
+            x_pad = round(w * 0.0322)
+            y_pad = round(h * 0.0222)
+            if 0 < x_pad < w // 4 and 0 < y_pad < h // 4:
+                img = img.crop((x_pad, y_pad, w - x_pad, h - y_pad))
 
         # High quality Lanczos resize to exact card dimensions
         card_resized = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
