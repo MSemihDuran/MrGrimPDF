@@ -37,14 +37,13 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     cell_h = mm_to_px(CELL_H_MM, dpi)
 
     # Exact 5.9cm x 8.6cm card with symmetrical 5.0mm bleed on all sides:
-    # 5.0mm bleed: 79 px at 400 DPI
-    # 5.9cm (59.0mm) card width: 929 px at 400 DPI
-    # 8.6cm (86.0mm) card height: 1354 px at 400 DPI
-    # Check: 79 + 929 + 79 = 1087 px (cell_w); 79 + 1354 + 79 = 1512 px (cell_h).
-    card_x_offset = round(BLEED_MM * dpi / 25.4)
-    card_y_offset = round(BLEED_MM * dpi / 25.4)
-    card_w = round(CARD_W_MM * dpi / 25.4)
-    card_h = round(CARD_H_MM * dpi / 25.4)
+    # Exact coordinates matching base card and shadow in card_back_50x70.jpg (937 x 1297):
+    # In 937x1297: xmin=88, xmax=848 (width=761), ymin=82, ymax=1213 (height=1132)
+    # Check: 102 + 883 + 102 = 1087 px (cell_w); 96 + 1320 + 96 = 1512 px (cell_h)
+    card_x_offset = round(cell_w * 88 / 937)   # 102 px
+    card_y_offset = round(cell_h * 82 / 1297)  # 96 px
+    card_w = round(cell_w * 761 / 937)         # 883 px
+    card_h = round(cell_h * 1132 / 1297)       # 1320 px
 
     # 7 * 69mm = 483mm. Remaining width on 500mm = 17mm.
     total_grid_w = COLS * cell_w
