@@ -626,7 +626,7 @@ def process_action(action):
             fill_mode = data.get('fill_mode', 'uploaded_only')
             rotation = data.get('rotation', 'none')
             empty_color = data.get('empty_color', 'card_back')
-            crop_marks = data.get('crop_marks', 'none')
+            crop_marks = data.get('crop_marks', 'guillotine')
             export_format = data.get('export_format', 'png').lower()
             grid_order = data.get('grid_order', 'col_first')
 

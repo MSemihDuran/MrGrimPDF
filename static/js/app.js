@@ -834,13 +834,15 @@ function renderDynamicToolOptions(toolKey) {
                 </div>
 
                 <div class="config-group">
-                    <label class="config-label">Kesim / Kılavuz Çizgileri (İsteğe Bağlı)</label>
+                    <label class="config-label">Kesim / Kılavuz Çizgileri (Giyotin)</label>
                     <select id="card5070CropMarksSelect" class="config-select" onchange="syncCard50x70CropMarks(this.value)">
-                        <option value="none" selected>Kılavuz Çizgisi Yok (Düz / Sade)</option>
-                        <option value="corners">Köşe Kesim Çizgileri (Matbaa Giyotin)</option>
+                        <option value="guillotine" selected>Giyotin Kesim Çizgileri (Dış Kenarlar - Varsayılan)</option>
+                        <option value="all">Giyotin + Kart İçi Köşe Çizgileri</option>
+                        <option value="corners">Sadece Kart İçi Köşe Çizgileri</option>
                         <option value="border">İnce Çerçeve Kılavuz Çizgisi</option>
+                        <option value="none">Kılavuz Çizgisi Yok (Çizgisiz / Düz)</option>
                     </select>
-                    <span class="config-hint">İsteğe bağlı olarak matbaa giyotin kesimi için çizgiler ekler.</span>
+                    <span class="config-hint">Dış kenarlardaki çizgiler matbaada giyotin bıçağının tam birleşim yerlerinden kesmesini sağlar.</span>
                 </div>
 
                 <div class="config-group">
@@ -2662,11 +2664,48 @@ state.cardSheet50x70Rotation = 'none';
 state.cardSheet50x70EmptyColor = 'card_back';
 state.cardSheet50x70GridOrder = 'col_first';
 
+function renderGuillotineMarksSvg50x70(visible = true) {
+    const svg = document.getElementById('guillotineMarksSvg50x70');
+    if (!svg) return;
+    if (!visible) {
+        svg.innerHTML = '';
+        return;
+    }
+
+    // 500mm x 700mm paper coordinates in mm:
+    // Left margin: 8.5mm, Col width: 69mm
+    // Top margin: 14.0mm, Row height: 96mm
+    let svgHtml = '';
+    const stroke = '#000000';
+    const strokeWidth = '0.75';
+
+    // 8 vertical cuts (along columns, across top and bottom margins)
+    for (let c = 0; c <= 7; c++) {
+        const x = 8.5 + c * 69.0;
+        // Top margin tick: from y=0 to y=14
+        svgHtml += `<line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="14" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        // Bottom margin tick: from y=686 to y=700
+        svgHtml += `<line x1="${x.toFixed(2)}" y1="686" x2="${x.toFixed(2)}" y2="700" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    }
+
+    // 8 horizontal cuts (along rows, across left and right margins)
+    for (let r = 0; r <= 7; r++) {
+        const y = 14.0 + r * 96.0;
+        // Left margin tick: from x=0 to x=8.5
+        svgHtml += `<line x1="0" y1="${y.toFixed(2)}" x2="8.5" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        // Right margin tick: from x=491.5 to x=500
+        svgHtml += `<line x1="491.5" y1="${y.toFixed(2)}" x2="500" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    }
+
+    svg.innerHTML = svgHtml;
+}
+
 function initCardSheet50x70Studio() {
     if (!state.cardSheet50x70Slots || state.cardSheet50x70Slots.length !== 49) {
         state.cardSheet50x70Slots = new Array(49).fill(null);
     }
     renderCardSheet50x70Grid();
+    renderGuillotineMarksSvg50x70(true);
 }
 
 function updateCardSheet50x70GridOrder(order) {
@@ -2691,15 +2730,18 @@ function updateCardSheet50x70EmptyColor(val) {
 function toggleCard50x70GuideLines(checked) {
     const sel = document.getElementById('card5070CropMarksSelect');
     if (sel) {
-        sel.value = checked ? 'corners' : 'none';
+        sel.value = checked ? 'guillotine' : 'none';
     }
+    renderGuillotineMarksSvg50x70(checked);
 }
 
 function syncCard50x70CropMarks(val) {
     const toggle = document.getElementById('card5070GuideLinesToggle');
+    const isEnabled = (val !== 'none');
     if (toggle) {
-        toggle.checked = val !== 'none';
+        toggle.checked = isEnabled;
     }
+    renderGuillotineMarksSvg50x70(isEnabled);
 }
 
 function renderCardSheet50x70Grid() {
@@ -3012,8 +3054,8 @@ async function generateCardSheet50x70InBrowser(options) {
             });
         }
 
-        // 3. Crop marks
-        if (cropMarks === 'corners') {
+        // 3. Optional inner card crop marks
+        if (cropMarks === 'all' || cropMarks === 'corners') {
             const markLen = 25;
             const markGap = 6;
             ctx.strokeStyle = '#000000';
@@ -3034,6 +3076,44 @@ async function generateCardSheet50x70InBrowser(options) {
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
             ctx.strokeRect(slot.cardX, slot.cardY, cardW, cardH);
+        }
+    }
+
+    // 4. Guillotine cut guide marks in outer margins (en dış alanda birleşim yerlerine)
+    if (cropMarks === 'guillotine' || cropMarks === 'all' || cropMarks === 'corners' || cropMarks === 'border') {
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+
+        // 8 vertical cuts in top and bottom margins (c = 0 to 7)
+        for (let c = 0; c <= 7; c++) {
+            const x = marginX + c * cellW;
+            // Top margin: from y=0 to y=marginY
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, marginY);
+            ctx.stroke();
+
+            // Bottom margin: from y=marginY + 7*cellH to y=11024
+            ctx.beginPath();
+            ctx.moveTo(x, marginY + 7 * cellH);
+            ctx.lineTo(x, 11024);
+            ctx.stroke();
+        }
+
+        // 8 horizontal cuts in left and right margins (r = 0 to 7)
+        for (let r = 0; r <= 7; r++) {
+            const y = marginY + r * cellH;
+            // Left margin: from x=0 to x=marginX
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(marginX, y);
+            ctx.stroke();
+
+            // Right margin: from x=marginX + 7*cellW to x=7874
+            ctx.beginPath();
+            ctx.moveTo(marginX + 7 * cellW, y);
+            ctx.lineTo(7874, y);
+            ctx.stroke();
         }
     }
 

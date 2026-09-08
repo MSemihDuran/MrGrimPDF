@@ -175,6 +175,39 @@ def draw_crop_marks(draw, card_x, card_y, card_w, card_h, style="corners"):
         draw.line([(card_x + card_w, card_y + card_h + mark_gap), (card_x + card_w, card_y + card_h + mark_gap + mark_len)], fill=line_color, width=line_width)
 
 
+def draw_guillotine_marks(draw, layout, canvas_w, canvas_h):
+    """
+    Draws guillotine cut guide marks in the outer margins of the 50x70 cm sheet.
+    Marks are placed at every junction of the 6.9x9.6cm card-back cells
+    (8 vertical cut positions at columns and 8 horizontal cut positions at rows).
+    """
+    line_color = (0, 0, 0)
+    line_width = 3
+
+    margin_x = layout["margin_x"]
+    margin_y = layout["margin_y"]
+    cell_w = layout["cell_w"]
+    cell_h = layout["cell_h"]
+    total_grid_w = COLS * cell_w
+    total_grid_h = ROWS * cell_h
+
+    # 8 vertical cut lines (along columns, in top and bottom margins)
+    for c in range(COLS + 1):
+        x = margin_x + c * cell_w
+        # Top margin mark: from paper top (y=0) to grid top (margin_y)
+        draw.line([(x, 0), (x, margin_y)], fill=line_color, width=line_width)
+        # Bottom margin mark: from grid bottom to paper bottom (canvas_h)
+        draw.line([(x, margin_y + total_grid_h), (x, canvas_h)], fill=line_color, width=line_width)
+
+    # 8 horizontal cut lines (along rows, in left and right margins)
+    for r in range(ROWS + 1):
+        y = margin_y + r * cell_h
+        # Left margin mark: from paper left (x=0) to grid left (margin_x)
+        draw.line([(0, y), (margin_x, y)], fill=line_color, width=line_width)
+        # Right margin mark: from grid right to paper right (canvas_w)
+        draw.line([(margin_x + total_grid_w, y), (canvas_w, y)], fill=line_color, width=line_width)
+
+
 def generate_card_sheet_50x70(
     image_paths,
     output_path,
@@ -182,7 +215,7 @@ def generate_card_sheet_50x70(
     fill_mode="uploaded_only",
     rotation="none",
     empty_color="card_back",
-    crop_marks="none",
+    crop_marks="guillotine",
     export_format="png",
     grid_order="col_first",
     card_back_path=None
@@ -190,6 +223,7 @@ def generate_card_sheet_50x70(
     """
     Generates a 50x70 cm sheet with 49 card slots (7x7) at 400 DPI.
     Each slot has a 6.9x9.6cm cell with card back bleed, and a centered 5.9x8.6cm card.
+    Outer margins contain guillotine cut guide marks at cell junctions.
     """
     layout = calculate_grid_positions_50x70(dpi=dpi, grid_order=grid_order)
     canvas_w = layout["canvas_w"]
@@ -255,9 +289,13 @@ def generate_card_sheet_50x70(
                     width=2
                 )
 
-        # 3. Optional crop / guide marks
-        if crop_marks != "none":
+        # Optional inner card crop marks
+        if crop_marks in ["all", "corners", "border"]:
             draw_crop_marks(draw, slot["card_x"], slot["card_y"], card_w, card_h, style=crop_marks)
+
+    # 3. Outer margin guillotine cut guide marks at cell junctions
+    if crop_marks in ["guillotine", "all", "corners", "border"]:
+        draw_guillotine_marks(draw, layout, canvas_w, canvas_h)
 
     # Save output
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
