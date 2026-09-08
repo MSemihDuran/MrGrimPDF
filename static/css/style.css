@@ -2051,7 +2051,7 @@ body {
 
 .slot-50x70 {
     position: relative;
-    background: #181524 url('/static/img/card_back_50x70.jpg') center/cover no-repeat;
+    background: #181524 url('/static/img/card_back_50x70.jpg?v=2') center/cover no-repeat;
     border: 1px solid rgba(225, 29, 72, 0.3);
     border-radius: 2px;
     overflow: hidden;

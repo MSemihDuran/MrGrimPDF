@@ -2724,7 +2724,7 @@ function renderCardSheet50x70Grid() {
         } else if (emptyColor === 'white') {
             slotEl.style.background = '#ffffff';
         } else {
-            slotEl.style.background = "#181524 url('/static/img/card_back_50x70.jpg') center/cover no-repeat";
+            slotEl.style.background = "#181524 url('/static/img/card_back_50x70.jpg?v=2') center/cover no-repeat";
         }
 
         // Slot number badge (1 to 49)
@@ -2929,7 +2929,7 @@ async function generateCardSheet50x70InBrowser(options) {
             const img = new Image();
             img.onload = () => resolve(img);
             img.onerror = () => resolve(null);
-            img.src = '/static/img/card_back_50x70.jpg';
+            img.src = '/static/img/card_back_50x70.jpg?v=2';
         });
     } catch (e) {
         cardBackImg = null;
