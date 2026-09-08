@@ -36,13 +36,15 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     cell_w = mm_to_px(CELL_W_MM, dpi)
     cell_h = mm_to_px(CELL_H_MM, dpi)
 
-    # Exact placement matching the base card in genisletilmis kart (937 x 1297):
-    # Base card coordinates: left=88/937, top=82/1297, width=761/937, height=1130/1297.
-    # The drop shadow from 77 to 860 and 72 to 1226 frames the card naturally.
-    card_x_offset = round(cell_w * 88 / 937)
-    card_y_offset = round(cell_h * 82 / 1297)
-    card_w = round(cell_w * 761 / 937)
-    card_h = round(cell_h * 1130 / 1297)
+    # Exact 5.9cm x 8.6cm card with symmetrical 5.0mm bleed on all sides:
+    # 5.0mm bleed: 79 px at 400 DPI
+    # 5.9cm (59.0mm) card width: 929 px at 400 DPI
+    # 8.6cm (86.0mm) card height: 1354 px at 400 DPI
+    # Check: 79 + 929 + 79 = 1087 px (cell_w); 79 + 1354 + 79 = 1512 px (cell_h).
+    card_x_offset = round(BLEED_MM * dpi / 25.4)
+    card_y_offset = round(BLEED_MM * dpi / 25.4)
+    card_w = round(CARD_W_MM * dpi / 25.4)
+    card_h = round(CARD_H_MM * dpi / 25.4)
 
     # 7 * 69mm = 483mm. Remaining width on 500mm = 17mm.
     total_grid_w = COLS * cell_w
@@ -108,95 +110,10 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     }
 
 
-def extract_clean_card(img):
-    """
-    If the uploaded card image already contains a smoky background margin,
-    detects it and crops to the pure card content so it seats seamlessly over
-    the template card slot with the template's natural drop shadow.
-    If the image is already a clean/bare card, returns it untouched.
-    """
-    w, h = img.size
-    rgb_img = img.convert("RGB")
-    corners = [
-        rgb_img.getpixel((0, 0)),
-        rgb_img.getpixel((w - 1, 0)),
-        rgb_img.getpixel((0, h - 1)),
-        rgb_img.getpixel((w - 1, h - 1))
-    ]
-    for c in corners:
-        r, g, b = c[:3]
-        if not (abs(r - g) < 25 and b >= r - 5 and 70 < b < 225):
-            return img
-
-    max_scan_x = int(w * 0.12)
-    max_scan_y = int(h * 0.12)
-
-    # 1. Left scan
-    y_start = int(h * 0.3)
-    y_end = int(h * 0.7)
-    sample_h = y_end - y_start
-
-    col_means = []
-    for x in range(max_scan_x):
-        total = sum(sum(rgb_img.getpixel((x, y))) for y in range(y_start, y_end, 2))
-        col_means.append(total / (sample_h // 2 * 3))
-
-    min_x = min(range(len(col_means)), key=lambda i: col_means[i])
-    left = min_x
-    while left < max_scan_x and col_means[left] < col_means[min_x] + 20:
-        left += 1
-
-    # 2. Right scan
-    r_col_means = []
-    for x in range(w - max_scan_x, w):
-        total = sum(sum(rgb_img.getpixel((x, y))) for y in range(y_start, y_end, 2))
-        r_col_means.append(total / (sample_h // 2 * 3))
-
-    min_rx = min(range(len(r_col_means)), key=lambda i: r_col_means[i])
-    right = w - max_scan_x + min_rx
-    while right > w - max_scan_x and r_col_means[right - (w - max_scan_x)] < r_col_means[min_rx] + 20:
-        right -= 1
-
-    # 3. Top scan
-    x_start = int(w * 0.3)
-    x_end = int(w * 0.7)
-    sample_w = x_end - x_start
-    row_means = []
-    for y in range(max_scan_y):
-        total = sum(sum(rgb_img.getpixel((x, y))) for x in range(x_start, x_end, 2))
-        row_means.append(total / (sample_w // 2 * 3))
-
-    min_y = min(range(len(row_means)), key=lambda i: row_means[i])
-    top = min_y
-    while top < max_scan_y and row_means[top] < row_means[min_y] + 20:
-        top += 1
-
-    # 4. Bottom scan
-    b_row_means = []
-    for y in range(h - max_scan_y, h):
-        total = sum(sum(rgb_img.getpixel((x, y))) for x in range(x_start, x_end, 2))
-        b_row_means.append(total / (sample_w // 2 * 3))
-
-    min_b_val = 999
-    min_by = max_scan_y - 1
-    for idx in range(max_scan_y - 1, int(max_scan_y * 0.4), -1):
-        if b_row_means[idx] < min_b_val:
-            min_b_val = b_row_means[idx]
-            min_by = idx
-
-    bottom = h - max_scan_y + min_by
-    while bottom > h - max_scan_y and b_row_means[bottom - (h - max_scan_y)] < min_b_val + 20:
-        bottom -= 1
-
-    if right > left + 100 and bottom > top + 100:
-        return img.crop((left, top, right, bottom))
-    return img
-
-
 def prepare_card_image(image_path, target_w, target_h, rotation="none"):
     """
-    Loads, scales and optionally rotates a card image to target_w x target_h.
-    Automatically extracts the clean card if an outer smoke border is detected.
+    Loads, scales and optionally rotates any card image to target_w x target_h (5.9 x 8.6 cm).
+    Fits the exact 5.9x8.6 cm boundary without shifting, clipping or extra distortion.
     For portrait cards (5.9 x 8.6), rotation='none' is default.
     """
     with Image.open(image_path) as src_img:
@@ -212,10 +129,7 @@ def prepare_card_image(image_path, target_w, target_h, rotation="none"):
             if w > h and target_h > target_w:
                 img = img.transpose(Image.Transpose.ROTATE_90)
 
-        # Remove outer smoke border if pre-existing in the source image
-        img = extract_clean_card(img)
-
-        # High quality Lanczos resize
+        # High quality Lanczos resize to exact card dimensions
         card_resized = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
         return card_resized
 

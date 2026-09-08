@@ -2072,7 +2072,7 @@ body {
 
 .slot-50x70 {
     position: relative;
-    background: #181524 url('/static/img/card_back_50x70.jpg?v=2') center/cover no-repeat;
+    background: #181524 url('/static/img/card_back_50x70.jpg?v=2') 0 0 / 100% 100% no-repeat;
     border: none; /* BİRLEŞİK: Hücreler arasında boşluk veya kenarlık yok */
     border-radius: 0; /* BİRLEŞİK: Tam köşeli bitişik dikdörtgen */
     overflow: hidden;
@@ -2096,13 +2096,13 @@ body {
     /* Card is filled */
 }
 
-/* Inner card area positioned exactly over the base card in card_back_50x70.jpg */
+/* Exact 5.9 x 8.6 cm card area centered with 5mm bleed on all sides in 6.9 x 9.6 cm slot */
 .slot-50x70-inner {
     position: absolute;
-    left: 9.392%;  /* 88 / 937 */
-    top: 6.322%;   /* 82 / 1297 */
-    width: 81.217%; /* 761 / 937 */
-    height: 87.124%; /* 1130 / 1297 */
+    left: 7.246%;  /* 5mm / 69mm */
+    top: 5.208%;   /* 5mm / 96mm */
+    width: 85.507%; /* 59mm / 69mm */
+    height: 89.583%; /* 86mm / 96mm */
     box-sizing: border-box;
     display: flex;
     align-items: center;

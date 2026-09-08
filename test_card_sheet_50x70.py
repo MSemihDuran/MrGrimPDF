@@ -48,10 +48,10 @@ class TestCardSheet50x70(unittest.TestCase):
         self.assertEqual(layout["canvas_h"], 11024)
         self.assertEqual(layout["cell_w"], 1087)
         self.assertEqual(layout["cell_h"], 1512)
-        self.assertEqual(layout["card_w"], 883)
-        self.assertEqual(layout["card_h"], 1317)
-        self.assertEqual(layout["bleed_x"], 102)
-        self.assertEqual(layout["bleed_y"], 96)
+        self.assertEqual(layout["card_w"], 929)
+        self.assertEqual(layout["card_h"], 1354)
+        self.assertEqual(layout["bleed_x"], 79)
+        self.assertEqual(layout["bleed_y"], 79)
         self.assertEqual(len(layout["slots"]), 49)
 
         # Check first slot alignment
