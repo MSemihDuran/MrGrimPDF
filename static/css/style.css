@@ -2096,31 +2096,38 @@ body {
     /* Card is filled */
 }
 
-/* Inner 5.9 x 8.6 cm card area centered with 5mm bleed around it */
+/* Inner card area positioned exactly over the base card in card_back_50x70.jpg */
 .slot-50x70-inner {
-    width: 85.507%; /* 59mm / 69mm = 85.507% */
-    height: 89.583%; /* 86mm / 96mm = 89.583% */
-    position: relative;
+    position: absolute;
+    left: 8.218%;  /* 77 / 937 */
+    top: 5.551%;   /* 72 / 1297 */
+    width: 83.671%; /* 784 / 937 */
+    height: 88.975%; /* 1154 / 1297 */
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px dashed rgba(255, 255, 255, 0.28);
+    border: 1px dashed rgba(255, 255, 255, 0.22);
     border-radius: 0;
-    background: rgba(0, 0, 0, 0.15);
+    background: transparent;
+    overflow: hidden;
 }
 
 .slot-50x70.has-card .slot-50x70-inner {
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    background: #000000;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 .slot-50x70-card-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: fill;
     display: block;
     pointer-events: none;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .slot-50x70-num {

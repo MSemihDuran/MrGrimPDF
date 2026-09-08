@@ -36,11 +36,12 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
     cell_w = mm_to_px(CELL_W_MM, dpi)
     cell_h = mm_to_px(CELL_H_MM, dpi)
 
-    card_w = mm_to_px(CARD_W_MM, dpi)
-    card_h = mm_to_px(CARD_H_MM, dpi)
-
-    bleed_x = mm_to_px(BLEED_MM, dpi)
-    bleed_y = mm_to_px(BLEED_MM, dpi)
+    # Exact placement matching the base card in genisletilmis kart (937 x 1297):
+    # Covers the base card and shadow flawlessly: x=77/937, y=72/1297, w=784/937, h=1154/1297
+    card_x_offset = round(cell_w * 77 / 937)
+    card_y_offset = round(cell_h * 72 / 1297)
+    card_w = round(cell_w * 784 / 937)
+    card_h = round(cell_h * 1154 / 1297)
 
     # 7 * 69mm = 483mm. Remaining width on 500mm = 17mm.
     total_grid_w = COLS * cell_w
@@ -62,12 +63,12 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
                     "cell_y": cy,
                     "cell_w": cell_w,
                     "cell_h": cell_h,
-                    "card_x": cx + bleed_x,
-                    "card_y": cy + bleed_y,
+                    "card_x": cx + card_x_offset,
+                    "card_y": cy + card_y_offset,
                     "card_w": card_w,
                     "card_h": card_h,
-                    "bleed_x": bleed_x,
-                    "bleed_y": bleed_y
+                    "card_x_offset": card_x_offset,
+                    "card_y_offset": card_y_offset
                 })
     else:  # row_first
         for r in range(ROWS):
@@ -81,12 +82,12 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
                     "cell_y": cy,
                     "cell_w": cell_w,
                     "cell_h": cell_h,
-                    "card_x": cx + bleed_x,
-                    "card_y": cy + bleed_y,
+                    "card_x": cx + card_x_offset,
+                    "card_y": cy + card_y_offset,
                     "card_w": card_w,
                     "card_h": card_h,
-                    "bleed_x": bleed_x,
-                    "bleed_y": bleed_y
+                    "card_x_offset": card_x_offset,
+                    "card_y_offset": card_y_offset
                 })
 
     return {
@@ -96,8 +97,10 @@ def calculate_grid_positions_50x70(dpi=DPI_DEFAULT, grid_order="col_first"):
         "cell_h": cell_h,
         "card_w": card_w,
         "card_h": card_h,
-        "bleed_x": bleed_x,
-        "bleed_y": bleed_y,
+        "card_x_offset": card_x_offset,
+        "card_y_offset": card_y_offset,
+        "bleed_x": card_x_offset,
+        "bleed_y": card_y_offset,
         "margin_x": margin_x,
         "margin_y": margin_y,
         "slots": slots
@@ -294,20 +297,16 @@ def generate_card_sheet_50x70(
             card_img = prepare_card_image(img_path, card_w, card_h, rotation=rotation)
             canvas.paste(card_img, (slot["card_x"], slot["card_y"]))
         else:
-            # If empty slot, draw inner slot outline or placeholder if not white
-            if empty_color != "white":
+            # If empty slot, draw inner slot outline placeholder only for solid dark colors
+            if empty_color in ["black", "gray"]:
                 draw.rectangle(
                     [slot["card_x"], slot["card_y"], slot["card_x"] + card_w, slot["card_y"] + card_h],
                     outline=(80, 80, 80),
                     width=2
                 )
 
-        # Optional inner card crop marks
-        if crop_marks in ["all", "corners", "border"]:
-            draw_crop_marks(draw, slot["card_x"], slot["card_y"], card_w, card_h, style=crop_marks)
-
-    # 3. Outer margin guillotine cut guide marks at cell junctions
-    if crop_marks in ["guillotine", "all", "corners", "border"]:
+    # 3. Outer margin guillotine cut guide marks (en dış hatlarda, kartların üstünden asla geçmez)
+    if crop_marks != "none":
         draw_guillotine_marks(draw, layout, canvas_w, canvas_h)
 
     # Save output
