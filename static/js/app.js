@@ -43,7 +43,8 @@ const TOOLS = {
     'compare': { title: 'Compare PDFs', subtitle: 'Highlight visual differences between two revisions', icon: 'fa-code-compare', accept: '.pdf', multiple: true },
     'crop': { title: 'Crop PDF', subtitle: 'Crop page margins by percentages', icon: 'fa-crop-simple', accept: '.pdf', multiple: false },
     'pdf-to-pdfa': { title: 'PDF to PDF/A', subtitle: 'Create an archival PDF/A-2b document', icon: 'fa-box-archive', accept: '.pdf', multiple: false },
-    'game-cards-a3': { title: 'Oyun Kartı Matbaa Şablonu (A3)', subtitle: 'A3 sayfasına 18 adet 5.9x8.6cm oyun kartını 400 DPI matbaa standartlarında yatay dizin', icon: 'fa-layer-group', accept: 'image/*,.png,.jpg,.jpeg,.webp', multiple: true }
+    'game-cards-a3': { title: 'Oyun Kartı Matbaa Şablonu (A3)', subtitle: 'A3 sayfasına 18 adet 5.9x8.6cm oyun kartını 400 DPI matbaa standartlarında yatay dizin', icon: 'fa-layer-group', accept: 'image/*,.png,.jpg,.jpeg,.webp', multiple: true },
+    'game-cards-50x70': { title: 'Oyun Kartı Şablonu (50×70 cm)', subtitle: '50×70 cm kağıda 49 adet 5.9×8.6cm kartı 400 DPI çözünürlükte, 5mm taşma payı ve özel kart arkasıyla dizin', icon: 'fa-grip', accept: 'image/*,.png,.jpg,.jpeg,.webp', multiple: true }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -105,6 +106,25 @@ function initDragAndDrop() {
         cardSheetStage.addEventListener('drop', (e) => {
             if (e.dataTransfer && e.dataTransfer.files.length > 0) {
                 handleCardBatchUpload({ files: e.dataTransfer.files });
+            }
+        });
+    }
+
+    const cardSheet5070Stage = document.getElementById('stageCardSheet50x70Container');
+    if (cardSheet5070Stage) {
+        ['dragenter', 'dragover'].forEach(name => {
+            cardSheet5070Stage.addEventListener(name, (e) => {
+                e.preventDefault();
+            });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            cardSheet5070Stage.addEventListener(name, (e) => {
+                e.preventDefault();
+            });
+        });
+        cardSheet5070Stage.addEventListener('drop', (e) => {
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                handleCard50x70BatchUpload({ files: e.dataTransfer.files });
             }
         });
     }
@@ -176,6 +196,14 @@ function openTool(toolKey) {
         document.getElementById('processBtnText').textContent = '400 DPI Matbaa Şablonunu Oluştur & İndir';
     }
 
+    if (toolKey === 'game-cards-50x70') {
+        document.getElementById('stageDropHint').style.display = 'none';
+        const card5070Stage = document.getElementById('stageCardSheet50x70Container');
+        if (card5070Stage) card5070Stage.style.display = 'flex';
+        initCardSheet50x70Studio();
+        document.getElementById('processBtnText').textContent = '400 DPI Matbaa Şablonunu Oluştur & İndir';
+    }
+
     renderDynamicToolOptions(toolKey);
 
     document.getElementById('studioModal').classList.add('active');
@@ -189,6 +217,8 @@ function closeStudio() {
     state.activePages = [];
     state.cardSheetSlots = new Array(18).fill(null);
     state.cardSheetActiveSlot = null;
+    state.cardSheet50x70Slots = new Array(49).fill(null);
+    state.cardSheet50x70ActiveSlot = null;
 }
 
 function resetStudioWorkspace() {
@@ -201,6 +231,8 @@ function resetStudioWorkspace() {
     if (createStage) createStage.style.display = 'none';
     const cardStage = document.getElementById('stageCardSheetContainer');
     if (cardStage) cardStage.style.display = 'none';
+    const card5070Stage = document.getElementById('stageCardSheet50x70Container');
+    if (card5070Stage) card5070Stage.style.display = 'none';
     document.getElementById('studioResultState').style.display = 'none';
     document.getElementById('dynamicToolOptions').style.display = 'block';
     document.getElementById('btnProcessAction').style.display = 'block';
@@ -221,6 +253,11 @@ async function handleFileUpload(fileList, targetTool) {
 
     if (state.currentTool === 'game-cards-a3' || targetTool === 'game-cards-a3') {
         await handleCardBatchUpload({ files: fileList });
+        return;
+    }
+
+    if (state.currentTool === 'game-cards-50x70' || targetTool === 'game-cards-50x70') {
+        await handleCard50x70BatchUpload({ files: fileList });
         return;
     }
 
@@ -761,6 +798,80 @@ function renderDynamicToolOptions(toolKey) {
                         • <strong>Yuva Sayısı:</strong> 18 Kart (3 Sütun × 6 Satır)<br>
                         • <strong>Kart Ebatı:</strong> 5.9 cm × 8.6 cm (Yatay: 86 × 59 mm)<br>
                         • <strong>Çözünürlük:</strong> 400 DPI (4677 × 6614 px)
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'game-cards-50x70':
+            container.innerHTML = `
+                <div class="config-group">
+                    <label class="config-label">Dizilim Sırası (Placement Order)</label>
+                    <select id="card5070GridOrderSelect" class="config-select" onchange="updateCardSheet50x70GridOrder(this.value)">
+                        <option value="col_first" selected>Sütun Boyunca (Aşağı Doğru)</option>
+                        <option value="row_first">Satır Boyunca (Soldan Sağa)</option>
+                    </select>
+                    <span class="config-hint">Kartları ilk sütundan aşağıya doğru veya satır satır yerleştirir.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Doldurma Modu (Slot Fill Mode)</label>
+                    <select id="card5070FillModeSelect" class="config-select" onchange="updateCardSheet50x70FillMode(this.value)">
+                        <option value="uploaded_only" selected>Sadece Yüklenenleri Yerleştir (Kalanlar Arka Plan)</option>
+                        <option value="repeat">49 Yuvayı Doldur (Döngüsel Tekrarla)</option>
+                    </select>
+                    <span class="config-hint">Boş yuvalar kart arkası teması olarak kalır veya 49 yuvaya tamamlanır.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Kart Döndürme (Rotation)</label>
+                    <select id="card5070RotationSelect" class="config-select" onchange="updateCardSheet50x70Rotation(this.value)">
+                        <option value="none" selected>Döndürme (Standart Dikey Kart: 5.9x8.6 cm)</option>
+                        <option value="auto">Otomatik (Yataysa Dikeye Çevir)</option>
+                        <option value="ccw90">90° Sola Döndür</option>
+                        <option value="cw90">90° Sağa Döndür</option>
+                    </select>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Kesim / Kılavuz Çizgileri (İsteğe Bağlı)</label>
+                    <select id="card5070CropMarksSelect" class="config-select" onchange="syncCard50x70CropMarks(this.value)">
+                        <option value="none" selected>Kılavuz Çizgisi Yok (Düz / Sade)</option>
+                        <option value="corners">Köşe Kesim Çizgileri (Matbaa Giyotin)</option>
+                        <option value="border">İnce Çerçeve Kılavuz Çizgisi</option>
+                    </select>
+                    <span class="config-hint">İsteğe bağlı olarak matbaa giyotin kesimi için çizgiler ekler.</span>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Boş Yuva Zemin Stili</label>
+                    <select id="card5070EmptyColorSelect" class="config-select" onchange="updateCardSheet50x70EmptyColor(this.value)">
+                        <option value="card_back" selected>Kart Arkası Teması (Varsayılan)</option>
+                        <option value="black">Siyah Şablon Kutusu</option>
+                        <option value="gray">Koyu Gri</option>
+                        <option value="white">Beyaz</option>
+                    </select>
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label">Çıktı Formatı</label>
+                    <select id="card5070ExportFormatSelect" class="config-select">
+                        <option value="png" selected>PNG Resim (400 DPI - Matbaa Tavsiyeli)</option>
+                        <option value="pdf">PDF Belge (50×70 cm Vektör Baskı Standardı)</option>
+                        <option value="jpeg">JPEG Resim (400 DPI - %100 Kalite)</option>
+                    </select>
+                </div>
+
+                <div class="config-group" style="background: rgba(225, 29, 72, 0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(225, 29, 72, 0.2);">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #be123c; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-info"></i> 50×70 cm Matbaa Parametreleri
+                    </div>
+                    <div style="font-size: 0.75rem; color: #475569; line-height: 1.5;">
+                        • <strong>Kağıt:</strong> 50 × 70 cm (500 × 700 mm)<br>
+                        • <strong>Yuva Sayısı:</strong> 49 Kart (7 Sütun × 7 Satır)<br>
+                        • <strong>Oyun Kartı:</strong> 5.9 cm × 8.6 cm (Dikey)<br>
+                        • <strong>Taşma Payı / Arka Plan:</strong> Her kenardan +5mm (6.9 × 9.6 cm)<br>
+                        • <strong>Çözünürlük:</strong> 400 DPI (7874 × 11024 px)
                     </div>
                 </div>
             `;
@@ -1427,7 +1538,7 @@ function updateDownloadFilename(newVal) {
     const dlBtn = document.getElementById('downloadResultBtn');
     if (dlBtn) {
         let clean = newVal.trim();
-        if (state.currentTool !== 'game-cards-a3' && clean && !clean.includes('.')) {
+        if (state.currentTool !== 'game-cards-a3' && state.currentTool !== 'game-cards-50x70' && clean && !clean.includes('.')) {
             clean += '.pdf';
         }
         dlBtn.download = clean || 'MrGrimPDF_Document';
@@ -1519,6 +1630,101 @@ async function executeCurrentTool() {
             try {
                 const blob = await generateCardSheetInBrowser({
                     validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder, filename: defaultFilename
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: defaultFilename
+                });
+                addSessionHistory(action, defaultFilename, blob.size, blobUrl);
+            } catch (fallbackErr) {
+                alert('İşlem sırasında hata oluştu: ' + (err.message || fallbackErr.message));
+                document.getElementById('btnProcessAction').style.display = 'block';
+                document.getElementById('processProgressBar').style.display = 'none';
+            }
+        }
+        return;
+    }
+
+    if (action === 'game-cards-50x70') {
+        const slots = state.cardSheet50x70Slots || [];
+        const validCards = slots.filter(item => item && item.file);
+
+        if (validCards.length === 0) {
+            alert('Lütfen en az 1 oyun kartı görseli seçin.');
+            document.getElementById('btnProcessAction').style.display = 'block';
+            document.getElementById('processProgressBar').style.display = 'none';
+            return;
+        }
+
+        const fillMode = document.getElementById('card5070FillModeSelect') ? document.getElementById('card5070FillModeSelect').value : 'uploaded_only';
+        const rotation = document.getElementById('card5070RotationSelect') ? document.getElementById('card5070RotationSelect').value : 'none';
+        const emptyColor = document.getElementById('card5070EmptyColorSelect') ? document.getElementById('card5070EmptyColorSelect').value : 'card_back';
+        const cropMarks = document.getElementById('card5070CropMarksSelect') ? document.getElementById('card5070CropMarksSelect').value : 'none';
+        const exportFormat = document.getElementById('card5070ExportFormatSelect') ? document.getElementById('card5070ExportFormatSelect').value : 'png';
+        const gridOrder = document.getElementById('card5070GridOrderSelect') ? document.getElementById('card5070GridOrderSelect').value : 'col_first';
+
+        formData.append('fill_mode', fillMode);
+        formData.append('rotation', rotation);
+        formData.append('empty_color', emptyColor);
+        formData.append('crop_marks', cropMarks);
+        formData.append('export_format', exportFormat);
+        formData.append('grid_order', gridOrder);
+
+        validCards.forEach(item => {
+            formData.append('images', item.file);
+        });
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const ext = exportFormat === 'pdf' ? 'pdf' : (exportFormat === 'jpeg' ? 'jpg' : 'png');
+        const defaultFilename = `MrGrimPDF_OyunKarti_50x70_400DPI_${dateStr}.${ext}`;
+        formData.append('custom_name', defaultFilename);
+
+        const totalSize = validCards.reduce((acc, c) => acc + (c.file ? c.file.size : 0), 0);
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // Direct browser generation for large uploads on Vercel to avoid 4.5MB serverless limits
+        if (!isLocal && totalSize > 4 * 1024 * 1024 && exportFormat !== 'pdf') {
+            try {
+                const blob = await generateCardSheet50x70InBrowser({
+                    validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder, filename: defaultFilename, exportFormat
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                showSuccessResult({
+                    success: true,
+                    download_url: blobUrl,
+                    filename: defaultFilename
+                });
+                addSessionHistory(action, defaultFilename, blob.size, blobUrl);
+                return;
+            } catch (bErr) {
+                console.warn('50x70 Browser generation fallback exception:', bErr);
+            }
+        }
+
+        try {
+            const res = await fetch('/api/process/game-cards-50x70', {
+                method: 'POST',
+                body: formData
+            });
+            if (!res.ok) {
+                throw new Error(`Server returned ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
+                showSuccessResult(data);
+                addSessionHistory(action, data.filename, data.size, data.download_url);
+            } else {
+                throw new Error(data.error || 'İşlem başarısız');
+            }
+        } catch (err) {
+            console.warn('50x70 Server generation failed, attempting browser generation fallback:', err);
+            try {
+                const blob = await generateCardSheet50x70InBrowser({
+                    validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder, filename: defaultFilename, exportFormat
                 });
                 const blobUrl = URL.createObjectURL(blob);
                 showSuccessResult({
@@ -1851,7 +2057,7 @@ function showSuccessResult(data) {
     document.getElementById('processProgressBar').style.display = 'none';
     document.getElementById('studioResultState').style.display = 'block';
 
-    const isCardSheet = state.currentTool === 'game-cards-a3';
+    const isCardSheet = state.currentTool === 'game-cards-a3' || state.currentTool === 'game-cards-50x70';
     const isImage = data.filename && (data.filename.endsWith('.png') || data.filename.endsWith('.jpg') || data.filename.endsWith('.jpeg'));
 
     const heading = document.getElementById('resultStateHeading');
@@ -2445,4 +2651,415 @@ function setJpegDpi(buffer, dpi = 400) {
         newBuf.set(uint8.slice(2), 2 + app0.byteLength);
         return newBuf.buffer;
     }
+}
+
+/* ==========================================================================
+   GAME CARD 50X70 PRINT SHEET STUDIO (49 SLOTS - 400 DPI - 5MM BLEED)
+   ========================================================================== */
+state.cardSheet50x70Slots = new Array(49).fill(null);
+state.cardSheet50x70ActiveSlot = null;
+state.cardSheet50x70Rotation = 'none';
+state.cardSheet50x70EmptyColor = 'card_back';
+state.cardSheet50x70GridOrder = 'col_first';
+
+function initCardSheet50x70Studio() {
+    if (!state.cardSheet50x70Slots || state.cardSheet50x70Slots.length !== 49) {
+        state.cardSheet50x70Slots = new Array(49).fill(null);
+    }
+    renderCardSheet50x70Grid();
+}
+
+function updateCardSheet50x70GridOrder(order) {
+    state.cardSheet50x70GridOrder = order;
+    renderCardSheet50x70Grid();
+}
+
+function updateCardSheet50x70FillMode(val) {
+    // Fill mode changed
+}
+
+function updateCardSheet50x70Rotation(val) {
+    state.cardSheet50x70Rotation = val;
+    renderCardSheet50x70Grid();
+}
+
+function updateCardSheet50x70EmptyColor(val) {
+    state.cardSheet50x70EmptyColor = val;
+    renderCardSheet50x70Grid();
+}
+
+function toggleCard50x70GuideLines(checked) {
+    const sel = document.getElementById('card5070CropMarksSelect');
+    if (sel) {
+        sel.value = checked ? 'corners' : 'none';
+    }
+}
+
+function syncCard50x70CropMarks(val) {
+    const toggle = document.getElementById('card5070GuideLinesToggle');
+    if (toggle) {
+        toggle.checked = val !== 'none';
+    }
+}
+
+function renderCardSheet50x70Grid() {
+    const grid = document.getElementById('slotsGrid50x70');
+    if (!grid) return;
+    grid.innerHTML = '';
+    grid.classList.toggle('col-flow', state.cardSheet50x70GridOrder !== 'row_first');
+
+    const emptyColor = state.cardSheet50x70EmptyColor || 'card_back';
+    let filledCount = 0;
+
+    for (let i = 0; i < 49; i++) {
+        const item = state.cardSheet50x70Slots[i];
+        const slotEl = document.createElement('div');
+        slotEl.className = 'slot-50x70' + (item ? ' has-card' : '');
+        slotEl.setAttribute('data-slot-idx', i);
+
+        if (emptyColor === 'black') {
+            slotEl.style.background = '#121212';
+        } else if (emptyColor === 'gray') {
+            slotEl.style.background = '#282c34';
+        } else if (emptyColor === 'white') {
+            slotEl.style.background = '#ffffff';
+        } else {
+            slotEl.style.background = "#181524 url('/static/img/card_back_50x70.jpg') center/cover no-repeat";
+        }
+
+        // Slot number badge (1 to 49)
+        const numBadge = document.createElement('span');
+        numBadge.className = 'slot-50x70-num';
+        numBadge.textContent = `${i + 1}`;
+        slotEl.appendChild(numBadge);
+
+        // Inner 5.9 x 8.6 cm card container centered with 5mm bleed around it
+        const innerCard = document.createElement('div');
+        innerCard.className = 'slot-50x70-inner';
+
+        if (item && item.dataUrl) {
+            filledCount++;
+            const img = document.createElement('img');
+            img.src = item.dataUrl;
+            img.className = 'slot-50x70-card-img';
+            img.alt = `Kart ${i + 1}`;
+            innerCard.appendChild(img);
+
+            // Action buttons on hover: Replace and Delete
+            const actions = document.createElement('div');
+            actions.className = 'a3-card-slot-actions';
+
+            const btnReplace = document.createElement('button');
+            btnReplace.type = 'button';
+            btnReplace.className = 'btn-slot-action btn-replace';
+            btnReplace.title = 'Kartı Değiştir';
+            btnReplace.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
+            btnReplace.onclick = (e) => {
+                e.stopPropagation();
+                handleSingleSlotClick50x70(i);
+            };
+            actions.appendChild(btnReplace);
+
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn-slot-action';
+            btnDel.title = 'Kartı Sil';
+            btnDel.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            btnDel.onclick = (e) => {
+                e.stopPropagation();
+                removeCardSlot50x70(i);
+            };
+            actions.appendChild(btnDel);
+
+            slotEl.appendChild(actions);
+        } else {
+            slotEl.onclick = () => handleSingleSlotClick50x70(i);
+        }
+
+        slotEl.appendChild(innerCard);
+        grid.appendChild(slotEl);
+    }
+
+    const badge = document.getElementById('cardSheet50x70CountBadge');
+    if (badge) {
+        badge.textContent = `${filledCount} / 49 Kart Yüklendi`;
+    }
+
+    const fillBtn = document.getElementById('btnFillAll50x70Slots');
+    if (fillBtn) {
+        fillBtn.style.display = (filledCount > 0 && filledCount < 49) ? 'inline-flex' : 'none';
+    }
+}
+
+async function handleCard50x70BatchUpload(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    let targetIdx = 0;
+    while (targetIdx < 49 && state.cardSheet50x70Slots[targetIdx] !== null) {
+        targetIdx++;
+    }
+    if (targetIdx >= 49) targetIdx = 0;
+
+    for (let i = 0; i < files.length && targetIdx < 49; i++) {
+        const file = files[i];
+        const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none');
+        state.cardSheet50x70Slots[targetIdx] = {
+            file: file,
+            dataUrl: dataUrl,
+            name: file.name
+        };
+        targetIdx++;
+    }
+
+    renderCardSheet50x70Grid();
+    const batchInput = document.getElementById('cardSheet50x70BatchInput');
+    if (batchInput) batchInput.value = '';
+}
+
+function handleSingleSlotClick50x70(slotIdx) {
+    state.cardSheet50x70ActiveSlot = slotIdx;
+    const input = document.getElementById('cardSheet50x70SlotInput');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+async function handleSingleSlotSelected50x70(input) {
+    const file = input.files[0];
+    if (!file || state.cardSheet50x70ActiveSlot === null) return;
+
+    const dataUrl = await generateRotatedThumbnail(file, state.cardSheet50x70Rotation || 'none');
+    state.cardSheet50x70Slots[state.cardSheet50x70ActiveSlot] = {
+        file: file,
+        dataUrl: dataUrl,
+        name: file.name
+    };
+    state.cardSheet50x70ActiveSlot = null;
+    renderCardSheet50x70Grid();
+}
+
+function removeCardSlot50x70(slotIdx) {
+    state.cardSheet50x70Slots[slotIdx] = null;
+    renderCardSheet50x70Grid();
+}
+
+function fillAllSlotsWithCards50x70() {
+    const valid = state.cardSheet50x70Slots.filter(item => item !== null);
+    if (valid.length === 0) return;
+
+    for (let i = 0; i < 49; i++) {
+        const source = valid[i % valid.length];
+        state.cardSheet50x70Slots[i] = {
+            file: source.file,
+            dataUrl: source.dataUrl,
+            name: source.name
+        };
+    }
+    renderCardSheet50x70Grid();
+}
+
+function clearCardSlots50x70() {
+    state.cardSheet50x70Slots = new Array(49).fill(null);
+    state.cardSheet50x70ActiveSlot = null;
+    renderCardSheet50x70Grid();
+}
+
+async function generateCardSheet50x70InBrowser(options) {
+    const { validCards, fillMode, rotation, emptyColor, cropMarks, gridOrder } = options;
+    const canvas = document.createElement('canvas');
+    canvas.width = 7874;
+    canvas.height = 11024;
+    const ctx = canvas.getContext('2d');
+
+    // White 50x70 cm paper background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 7874, 11024);
+
+    const cellW = 1087;
+    const cellH = 1512;
+    const cardW = 929;
+    const cardH = 1354;
+    const bleedX = 79;
+    const bleedY = 79;
+    const marginX = 134;
+    const marginY = 220;
+
+    const slots = [];
+    if (gridOrder === 'col_first') {
+        for (let col = 0; col < 7; col++) {
+            for (let row = 0; row < 7; row++) {
+                slots.push({
+                    cellX: marginX + col * cellW,
+                    cellY: marginY + row * cellH,
+                    cardX: marginX + col * cellW + bleedX,
+                    cardY: marginY + row * cellH + bleedY
+                });
+            }
+        }
+    } else {
+        for (let row = 0; row < 7; row++) {
+            for (let col = 0; col < 7; col++) {
+                slots.push({
+                    cellX: marginX + col * cellW,
+                    cellY: marginY + row * cellH,
+                    cardX: marginX + col * cellW + bleedX,
+                    cardY: marginY + row * cellH + bleedY
+                });
+            }
+        }
+    }
+
+    const slotItems = new Array(49).fill(null);
+    if (fillMode === 'repeat') {
+        for (let i = 0; i < 49; i++) {
+            slotItems[i] = validCards[i % validCards.length];
+        }
+    } else {
+        for (let i = 0; i < Math.min(validCards.length, 49); i++) {
+            slotItems[i] = validCards[i];
+        }
+    }
+
+    // Load default card back image
+    let cardBackImg = null;
+    try {
+        cardBackImg = await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = '/static/img/card_back_50x70.jpg';
+        });
+    } catch (e) {
+        cardBackImg = null;
+    }
+
+    for (let i = 0; i < 49; i++) {
+        const slot = slots[i];
+        const card = slotItems[i];
+        const hasCard = !!(card && (card.file || card.dataUrl));
+
+        // 1. Draw cell background (6.9 x 9.6 cm)
+        if (emptyColor === 'card_back' || hasCard) {
+            if (cardBackImg) {
+                ctx.drawImage(cardBackImg, slot.cellX, slot.cellY, cellW, cellH);
+            } else {
+                ctx.fillStyle = '#181524';
+                ctx.fillRect(slot.cellX, slot.cellY, cellW, cellH);
+            }
+        } else if (emptyColor === 'black') {
+            ctx.fillStyle = '#121212';
+            ctx.fillRect(slot.cellX, slot.cellY, cellW, cellH);
+        } else if (emptyColor === 'gray') {
+            ctx.fillStyle = '#282c34';
+            ctx.fillRect(slot.cellX, slot.cellY, cellW, cellH);
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(slot.cellX, slot.cellY, cellW, cellH);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(slot.cellX, slot.cellY, cellW, cellH);
+        }
+
+        // 2. Draw card centered inside cell (5.9 x 8.6 cm)
+        if (hasCard) {
+            await new Promise((resolve) => {
+                const img = new Image();
+                let blobUrl = null;
+                img.onload = () => {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(slot.cardX, slot.cardY, cardW, cardH);
+                    ctx.clip();
+
+                    if (blobUrl) {
+                        if (rotation === 'ccw90') {
+                            ctx.translate(slot.cardX, slot.cardY + cardH);
+                            ctx.rotate(-Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else if (rotation === 'cw90') {
+                            ctx.translate(slot.cardX + cardW, slot.cardY);
+                            ctx.rotate(Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else if (rotation === 'auto' && img.naturalWidth > img.naturalHeight) {
+                            ctx.translate(slot.cardX, slot.cardY + cardH);
+                            ctx.rotate(-Math.PI / 2);
+                            ctx.drawImage(img, 0, 0, cardH, cardW);
+                        } else {
+                            ctx.drawImage(img, slot.cardX, slot.cardY, cardW, cardH);
+                        }
+                    } else {
+                        ctx.drawImage(img, slot.cardX, slot.cardY, cardW, cardH);
+                    }
+                    ctx.restore();
+                    if (blobUrl) URL.revokeObjectURL(blobUrl);
+                    resolve();
+                };
+                img.onerror = () => {
+                    if (blobUrl) URL.revokeObjectURL(blobUrl);
+                    resolve();
+                };
+
+                if (card.file) {
+                    blobUrl = URL.createObjectURL(card.file);
+                    img.src = blobUrl;
+                } else if (card.dataUrl) {
+                    img.src = card.dataUrl;
+                } else {
+                    resolve();
+                }
+            });
+        }
+
+        // 3. Crop marks
+        if (cropMarks === 'corners') {
+            const markLen = 25;
+            const markGap = 6;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath(); ctx.moveTo(slot.cardX - markGap - markLen, slot.cardY); ctx.lineTo(slot.cardX - markGap, slot.cardY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.cardX, slot.cardY - markGap - markLen); ctx.lineTo(slot.cardX, slot.cardY - markGap); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.cardX + cardW + markGap, slot.cardY); ctx.lineTo(slot.cardX + cardW + markGap + markLen, slot.cardY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.cardX + cardW, slot.cardY - markGap - markLen); ctx.lineTo(slot.cardX + cardW, slot.cardY - markGap); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.cardX - markGap - markLen, slot.cardY + cardH); ctx.lineTo(slot.cardX - markGap, slot.cardY + cardH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.cardX, slot.cardY + cardH + markGap); ctx.lineTo(slot.cardX, slot.cardY + cardH + markGap + markLen); ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(slot.cardX + cardW + markGap, slot.cardY + cardH); ctx.lineTo(slot.cardX + cardW + markGap + markLen, slot.cardY + cardH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(slot.cardX + cardW, slot.cardY + cardH + markGap); ctx.lineTo(slot.cardX + cardW, slot.cardY + cardH + markGap + markLen); ctx.stroke();
+        } else if (cropMarks === 'border') {
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(slot.cardX, slot.cardY, cardW, cardH);
+        }
+    }
+
+    const isJpeg = (options.exportFormat === 'jpeg' || options.exportFormat === 'jpg' || (options.filename && options.filename.endsWith('.jpg')));
+    const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
+    const quality = isJpeg ? 1.0 : undefined;
+
+    return new Promise((resolve) => {
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                resolve(blob);
+                return;
+            }
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                let finalBuffer;
+                if (isJpeg) {
+                    finalBuffer = setJpegDpi(arrayBuffer, 400);
+                } else {
+                    finalBuffer = setPngDpi(arrayBuffer, 400);
+                }
+                resolve(new Blob([finalBuffer], { type: mimeType }));
+            } catch (dpiErr) {
+                console.warn('Could not inject 400 DPI metadata, returning raw blob:', dpiErr);
+                resolve(blob);
+            }
+        }, mimeType, quality);
+    });
 }

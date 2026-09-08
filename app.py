@@ -15,6 +15,7 @@ from modules.edit import add_watermark, add_page_numbers, apply_annotations
 from modules.security import protect_pdf, unlock_pdf, sign_pdf, redact_pdf, compare_pdfs
 from modules.create import create_pdf_from_content
 from modules.card_sheet import generate_card_sheet
+from modules.card_sheet_50x70 import generate_card_sheet_50x70
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mrgrimpdf-super-secret-key-2026'
@@ -114,7 +115,7 @@ def health():
             "compress", "repair", "ocr",
             "watermark", "page-numbers", "edit",
             "protect", "unlock", "sign", "redact", "compare",
-            "game-cards-a3"
+            "game-cards-a3", "game-cards-50x70"
         ]
     })
 
@@ -605,6 +606,62 @@ def process_action(action):
                 crop_marks=crop_marks,
                 export_format=export_format,
                 grid_order=grid_order
+            )
+
+        elif action == 'game-cards-50x70':
+            uploaded_images = request.files.getlist('images') or request.files.getlist('files')
+            image_paths = []
+            if uploaded_images:
+                for idx, img_file in enumerate(uploaded_images):
+                    if img_file and img_file.filename:
+                        safe_orig = secure_filename(img_file.filename) or f"card_{idx}.png"
+                        tmp_name = f"card5070_{out_id}_{idx}_{safe_orig}"
+                        tmp_path = os.path.join(UPLOAD_FOLDER, tmp_name)
+                        img_file.save(tmp_path)
+                        image_paths.append(tmp_path)
+
+            if not image_paths:
+                return jsonify({"error": "Lütfen en az bir oyun kartı görseli yükleyin."}), 400
+
+            fill_mode = data.get('fill_mode', 'uploaded_only')
+            rotation = data.get('rotation', 'none')
+            empty_color = data.get('empty_color', 'card_back')
+            crop_marks = data.get('crop_marks', 'none')
+            export_format = data.get('export_format', 'png').lower()
+            grid_order = data.get('grid_order', 'col_first')
+
+            # Optional custom card back upload
+            card_back_path = None
+            if 'card_back' in request.files:
+                cb_file = request.files['card_back']
+                if cb_file and cb_file.filename:
+                    cb_tmp = os.path.join(UPLOAD_FOLDER, f"cb_{out_id}_{secure_filename(cb_file.filename)}")
+                    cb_file.save(cb_tmp)
+                    card_back_path = cb_tmp
+
+            import datetime
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            custom_name = data.get('custom_name', '').strip()
+            ext = 'pdf' if export_format == 'pdf' else ('jpg' if export_format in ['jpg', 'jpeg'] else 'png')
+
+            if custom_name:
+                safe_base = secure_filename(custom_name).replace(f'.{ext}', '')
+                out_filename = f"{safe_base}.{ext}" if safe_base else f"MrGrimPDF_CardSheet_50x70_{now_str}.{ext}"
+            else:
+                out_filename = f"MrGrimPDF_CardSheet_50x70_400DPI_{now_str}.{ext}"
+
+            out_path = os.path.join(OUTPUT_FOLDER, out_filename)
+            generate_card_sheet_50x70(
+                image_paths=image_paths,
+                output_path=out_path,
+                dpi=400,
+                fill_mode=fill_mode,
+                rotation=rotation,
+                empty_color=empty_color,
+                crop_marks=crop_marks,
+                export_format=export_format,
+                grid_order=grid_order,
+                card_back_path=card_back_path
             )
 
         else:
