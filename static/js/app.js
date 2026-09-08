@@ -2713,88 +2713,47 @@ function renderGuillotineMarksSvg50x70(visible = true) {
     svg.innerHTML = svgHtml;
 }
 
-function detectCardCropBoxJs(img) {
-    try {
-        const nw = img.naturalWidth || img.width;
-        const nh = img.naturalHeight || img.height;
-        const ratio = nw / nh;
-        if (ratio < 0.60 || ratio > 0.75) {
-            return { sx: 0, sy: 0, sw: nw, sh: nh };
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = 16;
-        canvas.height = 16;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 16, 16);
-        const p1 = ctx.getImageData(0, 0, 1, 1).data;
-        const p2 = ctx.getImageData(15, 0, 1, 1).data;
-        const p3 = ctx.getImageData(0, 15, 1, 1).data;
-        const p4 = ctx.getImageData(15, 15, 1, 1).data;
-        const corners = [p1, p2, p3, p4];
-        let isCloudy = true;
-        for (const [r, g, b] of corners) {
-            if (Math.abs(r - g) > 25 || Math.abs(g - b) > 55 || Math.abs(r - b) > 55) {
-                isCloudy = false;
-                break;
-            }
-            if (r < 35 || r > 200 || g < 35 || g > 200 || b < 45 || b > 220) {
-                isCloudy = false;
-                break;
-            }
-        }
-        if (isCloudy) {
-            const xPad = Math.round(nw * 0.0322);
-            const yPad = Math.round(nh * 0.0222);
-            if (xPad > 0 && yPad > 0 && xPad < nw / 4 && yPad < nh / 4) {
-                return { sx: xPad, sy: yPad, sw: nw - 2 * xPad, sh: nh - 2 * yPad };
-            }
-        }
-    } catch (e) {}
-    const nw = img.naturalWidth || img.width;
-    const nh = img.naturalHeight || img.height;
-    return { sx: 0, sy: 0, sw: nw, sh: nh };
-}
-
 function generateRotatedThumbnail50x70(file, rotation) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                const crop = detectCardCropBoxJs(img);
+                const nw = img.naturalWidth;
+                const nh = img.naturalHeight;
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
                 const maxDim = 600;
                 let scale = 1;
-                if (Math.max(crop.sw, crop.sh) > maxDim) {
-                    scale = maxDim / Math.max(crop.sw, crop.sh);
+                if (Math.max(nw, nh) > maxDim) {
+                    scale = maxDim / Math.max(nw, nh);
                 }
-                const dw = Math.round(crop.sw * scale);
-                const dh = Math.round(crop.sh * scale);
+                const dw = Math.round(nw * scale);
+                const dh = Math.round(nh * scale);
 
                 if (rotation === 'ccw90') {
                     canvas.width = dh;
                     canvas.height = dw;
                     ctx.translate(0, dw);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, dw, dh);
+                    ctx.drawImage(img, 0, 0, dw, dh);
                 } else if (rotation === 'cw90') {
                     canvas.width = dh;
                     canvas.height = dw;
                     ctx.translate(dh, 0);
                     ctx.rotate(Math.PI / 2);
-                    ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, dw, dh);
-                } else if (rotation === 'auto' && crop.sw > crop.sh) {
+                    ctx.drawImage(img, 0, 0, dw, dh);
+                } else if (rotation === 'auto' && nw > nh) {
                     canvas.width = dh;
                     canvas.height = dw;
                     ctx.translate(0, dw);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, dw, dh);
+                    ctx.drawImage(img, 0, 0, dw, dh);
                 } else {
                     canvas.width = dw;
                     canvas.height = dh;
-                    ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, dw, dh);
+                    ctx.drawImage(img, 0, 0, dw, dh);
                 }
                 resolve(canvas.toDataURL('image/jpeg', 0.92));
             };
@@ -3085,7 +3044,7 @@ async function generateCardSheet50x70InBrowser(options) {
             const img = new Image();
             img.onload = () => resolve(img);
             img.onerror = () => resolve(null);
-            img.src = '/static/img/card_back_50x70.jpg?v=5';
+            img.src = '/static/img/card_back_50x70.jpg?v=6';
         });
     } catch (e) {
         cardBackImg = null;
@@ -3129,22 +3088,20 @@ async function generateCardSheet50x70InBrowser(options) {
                     ctx.rect(slot.cardX, slot.cardY, cardW, cardH);
                     ctx.clip();
 
-                    const crop = detectCardCropBoxJs(img);
-
                     if (rotation === 'ccw90') {
                         ctx.translate(slot.cardX, slot.cardY + cardH);
                         ctx.rotate(-Math.PI / 2);
-                        ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, cardH, cardW);
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
                     } else if (rotation === 'cw90') {
                         ctx.translate(slot.cardX + cardW, slot.cardY);
                         ctx.rotate(Math.PI / 2);
-                        ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, cardH, cardW);
-                    } else if (rotation === 'auto' && crop.sw > crop.sh) {
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
+                    } else if (rotation === 'auto' && img.naturalWidth > img.naturalHeight) {
                         ctx.translate(slot.cardX, slot.cardY + cardH);
                         ctx.rotate(-Math.PI / 2);
-                        ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, cardH, cardW);
+                        ctx.drawImage(img, 0, 0, cardH, cardW);
                     } else {
-                        ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, slot.cardX, slot.cardY, cardW, cardH);
+                        ctx.drawImage(img, slot.cardX, slot.cardY, cardW, cardH);
                     }
                     ctx.restore();
                     if (blobUrl) URL.revokeObjectURL(blobUrl);

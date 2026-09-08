@@ -2072,7 +2072,7 @@ body {
 
 .slot-50x70 {
     position: relative;
-    background: #181524 url('/static/img/card_back_50x70.jpg?v=5') center/cover no-repeat;
+    background: #181524 url('/static/img/card_back_50x70.jpg?v=6') center/cover no-repeat;
     border: none; /* BİRLEŞİK: Hücreler arasında boşluk veya kenarlık yok */
     border-radius: 0; /* BİRLEŞİK: Tam köşeli bitişik dikdörtgen */
     overflow: hidden;

@@ -59,19 +59,6 @@ class TestCardSheet50x70(unittest.TestCase):
         self.assertEqual(first["card_x"], first["cell_x"] + layout["bleed_x"])
         self.assertEqual(first["card_y"], first["cell_y"] + layout["bleed_y"])
 
-    def test_cloudy_margin_crop(self):
-        # Create a card with smoky borders
-        smoky_card = Image.new('RGB', (813, 1185), (114, 117, 148))
-        # Fill inner with red
-        from PIL import ImageDraw
-        draw = ImageDraw.Draw(smoky_card)
-        draw.rectangle([26, 26, 813 - 26, 1185 - 26], fill=(220, 50, 50))
-        p = os.path.join(TEST_DIR, "smoky_test_card.jpg")
-        smoky_card.save(p)
-
-        res = prepare_card_image(p, 884, 1318)
-        self.assertEqual(res.size, (884, 1318))
-
     def test_card_back_file_exists(self):
         self.assertTrue(os.path.isfile(DEFAULT_CARD_BACK_PATH), f"Card back image not found at {DEFAULT_CARD_BACK_PATH}")
         card_back = prepare_card_back(DEFAULT_CARD_BACK_PATH, 1087, 1512)
