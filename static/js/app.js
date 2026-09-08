@@ -2672,11 +2672,11 @@ function renderGuillotineMarksSvg50x70(visible = true) {
     // 500mm x 700mm paper coordinates in mm:
     // 7 columns: left margin 8.5mm, cell width 69mm
     // 7 rows: top margin 14.0mm, cell height 96mm
-    // Exact placement matching base card in card_back_50x70.jpg (937 x 1297):
-    const cardXOffset = 69.0 * 88 / 937;
-    const cardYOffset = 96.0 * 82 / 1297;
-    const cardW = 69.0 * 761 / 937;
-    const cardH = 96.0 * 1132 / 1297;
+    // Exact 5.9cm x 8.6cm card with symmetrical 5mm bleed:
+    const cardXOffset = 5.0;
+    const cardYOffset = 5.0;
+    const cardW = 59.0;
+    const cardH = 86.0;
 
     let svgHtml = '';
     const stroke = '#000000';
@@ -2784,7 +2784,7 @@ function renderCardSheet50x70Grid() {
         } else if (emptyColor === 'white') {
             slotEl.style.background = '#ffffff';
         } else {
-            slotEl.style.background = "#181524 url('/static/img/card_back_50x70.jpg?v=2') 0 0 / 100% 100% no-repeat";
+            slotEl.style.background = "#181524 url('/static/img/card_back_50x70.jpg?v=3') 0 0 / 100% 100% no-repeat";
         }
 
         // Slot number badge (1 to 49)
@@ -2939,13 +2939,13 @@ async function generateCardSheet50x70InBrowser(options) {
 
     const cellW = 1087;
     const cellH = 1512;
-    // Exact placement matching base card in card_back_50x70.jpg (937 x 1297):
-    const cardXOffset = Math.round(cellW * 88 / 937); // 102
-    const cardYOffset = Math.round(cellH * 82 / 1297); // 96
-    const cardW = Math.round(cellW * 761 / 937); // 883
-    const cardH = Math.round(cellH * 1132 / 1297); // 1320
-    const bleedX = cardXOffset;
-    const bleedY = cardYOffset;
+    // 5.9 cm x 8.6 cm card (929 x 1354 px at 400 DPI) with symmetrical 5.0 mm bleed (79 px):
+    const cardXOffset = 79;
+    const cardYOffset = 79;
+    const cardW = 929;
+    const cardH = 1354;
+    const bleedX = 79;
+    const bleedY = 79;
     const marginX = 134;
     const marginY = 220;
 
@@ -2992,7 +2992,7 @@ async function generateCardSheet50x70InBrowser(options) {
             const img = new Image();
             img.onload = () => resolve(img);
             img.onerror = () => resolve(null);
-            img.src = '/static/img/card_back_50x70.jpg?v=2';
+            img.src = '/static/img/card_back_50x70.jpg?v=3';
         });
     } catch (e) {
         cardBackImg = null;
