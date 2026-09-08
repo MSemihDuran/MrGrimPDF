@@ -178,8 +178,9 @@ def draw_crop_marks(draw, card_x, card_y, card_w, card_h, style="corners"):
 def draw_guillotine_marks(draw, layout, canvas_w, canvas_h):
     """
     Draws guillotine cut guide marks in the outer margins of the 50x70 cm sheet.
-    Marks are placed at every junction of the 6.9x9.6cm card-back cells
-    (8 vertical cut positions at columns and 8 horizontal cut positions at rows).
+    Marks are aligned precisely to the original 5.9cm x 8.6cm cards:
+    - 14 vertical cut lines (left and right edges of each of the 7 card columns)
+    - 14 horizontal cut lines (top and bottom edges of each of the 7 card rows)
     """
     line_color = (0, 0, 0)
     line_width = 3
@@ -188,24 +189,36 @@ def draw_guillotine_marks(draw, layout, canvas_w, canvas_h):
     margin_y = layout["margin_y"]
     cell_w = layout["cell_w"]
     cell_h = layout["cell_h"]
+    card_w = layout["card_w"]
+    card_h = layout["card_h"]
+    bleed_x = layout["bleed_x"]
+    bleed_y = layout["bleed_y"]
     total_grid_w = COLS * cell_w
     total_grid_h = ROWS * cell_h
 
-    # 8 vertical cut lines (along columns, in top and bottom margins)
-    for c in range(COLS + 1):
-        x = margin_x + c * cell_w
-        # Top margin mark: from paper top (y=0) to grid top (margin_y)
-        draw.line([(x, 0), (x, margin_y)], fill=line_color, width=line_width)
-        # Bottom margin mark: from grid bottom to paper bottom (canvas_h)
-        draw.line([(x, margin_y + total_grid_h), (x, canvas_h)], fill=line_color, width=line_width)
+    # 14 vertical cut lines (left and right edges of 7 card columns)
+    for c in range(COLS):
+        cell_x = margin_x + c * cell_w
+        x_left = cell_x + bleed_x
+        x_right = cell_x + bleed_x + card_w
 
-    # 8 horizontal cut lines (along rows, in left and right margins)
-    for r in range(ROWS + 1):
-        y = margin_y + r * cell_h
-        # Left margin mark: from paper left (x=0) to grid left (margin_x)
-        draw.line([(0, y), (margin_x, y)], fill=line_color, width=line_width)
-        # Right margin mark: from grid right to paper right (canvas_w)
-        draw.line([(margin_x + total_grid_w, y), (canvas_w, y)], fill=line_color, width=line_width)
+        for x in [x_left, x_right]:
+            # Top margin mark: from paper top (y=0) to grid top (margin_y)
+            draw.line([(x, 0), (x, margin_y)], fill=line_color, width=line_width)
+            # Bottom margin mark: from grid bottom to paper bottom (canvas_h)
+            draw.line([(x, margin_y + total_grid_h), (x, canvas_h)], fill=line_color, width=line_width)
+
+    # 14 horizontal cut lines (top and bottom edges of 7 card rows)
+    for r in range(ROWS):
+        cell_y = margin_y + r * cell_h
+        y_top = cell_y + bleed_y
+        y_bottom = cell_y + bleed_y + card_h
+
+        for y in [y_top, y_bottom]:
+            # Left margin mark: from paper left (x=0) to grid left (margin_x)
+            draw.line([(0, y), (margin_x, y)], fill=line_color, width=line_width)
+            # Right margin mark: from grid right to paper right (canvas_w)
+            draw.line([(margin_x + total_grid_w, y), (canvas_w, y)], fill=line_color, width=line_width)
 
 
 def generate_card_sheet_50x70(

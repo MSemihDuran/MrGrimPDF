@@ -2673,28 +2673,38 @@ function renderGuillotineMarksSvg50x70(visible = true) {
     }
 
     // 500mm x 700mm paper coordinates in mm:
-    // Left margin: 8.5mm, Col width: 69mm
-    // Top margin: 14.0mm, Row height: 96mm
+    // 7 columns: left margin 8.5mm, cell width 69mm, bleed 5mm, card width 59mm
+    // 7 rows: top margin 14.0mm, cell height 96mm, bleed 5mm, card height 86mm
     let svgHtml = '';
     const stroke = '#000000';
     const strokeWidth = '0.75';
 
-    // 8 vertical cuts (along columns, across top and bottom margins)
-    for (let c = 0; c <= 7; c++) {
-        const x = 8.5 + c * 69.0;
-        // Top margin tick: from y=0 to y=14
-        svgHtml += `<line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="14" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
-        // Bottom margin tick: from y=686 to y=700
-        svgHtml += `<line x1="${x.toFixed(2)}" y1="686" x2="${x.toFixed(2)}" y2="700" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    // 14 vertical cut lines (left and right edges of 7 card columns: 5.9cm)
+    for (let c = 0; c < 7; c++) {
+        const cellX = 8.5 + c * 69.0;
+        const xLeft = cellX + 5.0;
+        const xRight = cellX + 5.0 + 59.0;
+
+        [xLeft, xRight].forEach(x => {
+            // Top margin tick: from y=0 to y=14
+            svgHtml += `<line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="14" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+            // Bottom margin tick: from y=686 to y=700
+            svgHtml += `<line x1="${x.toFixed(2)}" y1="686" x2="${x.toFixed(2)}" y2="700" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        });
     }
 
-    // 8 horizontal cuts (along rows, across left and right margins)
-    for (let r = 0; r <= 7; r++) {
-        const y = 14.0 + r * 96.0;
-        // Left margin tick: from x=0 to x=8.5
-        svgHtml += `<line x1="0" y1="${y.toFixed(2)}" x2="8.5" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
-        // Right margin tick: from x=491.5 to x=500
-        svgHtml += `<line x1="491.5" y1="${y.toFixed(2)}" x2="500" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    // 14 horizontal cut lines (top and bottom edges of 7 card rows: 8.6cm)
+    for (let r = 0; r < 7; r++) {
+        const cellY = 14.0 + r * 96.0;
+        const yTop = cellY + 5.0;
+        const yBottom = cellY + 5.0 + 86.0;
+
+        [yTop, yBottom].forEach(y => {
+            // Left margin tick: from x=0 to x=8.5
+            svgHtml += `<line x1="0" y1="${y.toFixed(2)}" x2="8.5" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+            // Right margin tick: from x=491.5 to x=500
+            svgHtml += `<line x1="491.5" y1="${y.toFixed(2)}" x2="500" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        });
     }
 
     svg.innerHTML = svgHtml;
@@ -3079,41 +3089,51 @@ async function generateCardSheet50x70InBrowser(options) {
         }
     }
 
-    // 4. Guillotine cut guide marks in outer margins (en dış alanda birleşim yerlerine)
+    // 4. Guillotine cut guide marks in outer margins (5.9 x 8.6 cm kart kenarlarına hizalı)
     if (cropMarks === 'guillotine' || cropMarks === 'all' || cropMarks === 'corners' || cropMarks === 'border') {
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
 
-        // 8 vertical cuts in top and bottom margins (c = 0 to 7)
-        for (let c = 0; c <= 7; c++) {
-            const x = marginX + c * cellW;
-            // Top margin: from y=0 to y=marginY
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, marginY);
-            ctx.stroke();
+        // 14 vertical cuts (left and right edges of 7 card columns: 5.9cm)
+        for (let c = 0; c < 7; c++) {
+            const cellX = marginX + c * cellW;
+            const xLeft = cellX + bleedX;
+            const xRight = cellX + bleedX + cardW;
 
-            // Bottom margin: from y=marginY + 7*cellH to y=11024
-            ctx.beginPath();
-            ctx.moveTo(x, marginY + 7 * cellH);
-            ctx.lineTo(x, 11024);
-            ctx.stroke();
+            [xLeft, xRight].forEach(x => {
+                // Top margin: from y=0 to y=marginY
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, marginY);
+                ctx.stroke();
+
+                // Bottom margin: from y=marginY + 7*cellH to y=11024
+                ctx.beginPath();
+                ctx.moveTo(x, marginY + 7 * cellH);
+                ctx.lineTo(x, 11024);
+                ctx.stroke();
+            });
         }
 
-        // 8 horizontal cuts in left and right margins (r = 0 to 7)
-        for (let r = 0; r <= 7; r++) {
-            const y = marginY + r * cellH;
-            // Left margin: from x=0 to x=marginX
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(marginX, y);
-            ctx.stroke();
+        // 14 horizontal cuts (top and bottom edges of 7 card rows: 8.6cm)
+        for (let r = 0; r < 7; r++) {
+            const cellY = marginY + r * cellH;
+            const yTop = cellY + bleedY;
+            const yBottom = cellY + bleedY + cardH;
 
-            // Right margin: from x=marginX + 7*cellW to x=7874
-            ctx.beginPath();
-            ctx.moveTo(marginX + 7 * cellW, y);
-            ctx.lineTo(7874, y);
-            ctx.stroke();
+            [yTop, yBottom].forEach(y => {
+                // Left margin: from x=0 to x=marginX
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(marginX, y);
+                ctx.stroke();
+
+                // Right margin: from x=marginX + 7*cellW to x=7874
+                ctx.beginPath();
+                ctx.moveTo(marginX + 7 * cellW, y);
+                ctx.lineTo(7874, y);
+                ctx.stroke();
+            });
         }
     }
 
